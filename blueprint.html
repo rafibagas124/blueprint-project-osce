@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>OSCE Center 3D — Simulasi & Blueprint UKMPPAI Apoteker (2.000 Concurrent Users)</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
+  <meta name="theme-color" content="#0f766e" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="OSCE 3D" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="vendor/three.min.js"></script>
+  <script>window.THREE || document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');</script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- 3D WebGL Canvas -->
+  <div id="canvas-container"></div>
+
+  <!-- Center Crosshair -->
+  <div id="crosshair" class="crosshair"></div>
+
+  <!-- Dynamic 3D Floating Markers Overlay -->
+  <div id="markers-container" class="fixed inset-0 pointer-events-none z-[8]">
+    <!-- Chair Floating Badge (Kursi Tunggu Depan Pintu) -->
+    <div id="chair-marker" class="marker-3d hidden">
+      <button id="btn-chair-marker" type="button" class="hud-interactive flex flex-col items-center group">
+        <div class="bg-[#0f766e] hover:bg-[#115e59] text-white px-3.5 py-1.5 rounded-xl shadow-lg border border-teal-300/40 text-center transition transform group-hover:scale-105">
+          <div id="chair-marker-station" class="text-[10px] font-bold tracking-wider uppercase text-teal-200">STATION 01</div>
+          <div id="chair-marker-label" class="text-xs font-semibold whitespace-nowrap">Duduk di kursi tunggu</div>
+        </div>
+        <div class="w-7 h-7 rounded-full bg-[#0f766e] border-2 border-white text-white flex items-center justify-center shadow-md -mt-1">
+          <svg class="w-4 h-4 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+        </div>
+      </button>
+    </div>
+
+    <!-- Door Poster Floating Badge -->
+    <div id="door-marker" class="marker-3d hidden">
+      <button id="btn-door-marker" type="button" class="hud-interactive bg-indigo-900/90 hover:bg-indigo-800 text-white px-3 py-1.5 rounded-lg shadow-lg border border-indigo-300/40 text-xs font-semibold flex items-center gap-1.5 transition transform hover:scale-105">
+        <span class="px-1.5 py-0.5 rounded bg-white text-indigo-950 font-bold text-[10px]">E</span>
+        <span id="door-marker-text">Baca Petunjuk & Masuk</span>
+      </button>
+    </div>
+
+    <!-- Inside Room Interactive 3D Markers -->
+    <div id="room-marker-npc" class="marker-3d hidden">
+      <button id="btn-room-npc" type="button" class="hud-interactive bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-xl shadow-lg border border-emerald-300/50 text-xs font-semibold flex items-center gap-1.5">
+        <span class="px-1.5 py-0.5 rounded bg-white text-emerald-900 font-bold text-[10px]">E</span>
+        <span id="room-npc-label">Dialog Pasien / Kolega</span>
+      </button>
+    </div>
+
+    <div id="room-marker-lab" class="marker-3d hidden">
+      <button id="btn-room-lab" type="button" class="hud-interactive bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 rounded-xl shadow-lg border border-amber-200/50 text-xs font-semibold flex items-center gap-1.5">
+        <span class="px-1.5 py-0.5 rounded bg-white text-amber-900 font-bold text-[10px]">E</span>
+        <span id="room-lab-label">Periksa Sediaan / Alat 3D</span>
+      </button>
+    </div>
+
+    <div id="room-marker-desk" class="marker-3d hidden">
+      <button id="btn-room-desk" type="button" class="hud-interactive bg-indigo-700 hover:bg-indigo-600 text-white px-3 py-1.5 rounded-xl shadow-lg border border-indigo-300/50 text-xs font-semibold flex items-center gap-1.5">
+        <span class="px-1.5 py-0.5 rounded bg-white text-indigo-900 font-bold text-[10px]">E</span>
+        <span>Isi Lembar Kerja & Keputusan</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- HUD OVERLAY (USER INTERFACE) -->
+  <div class="hud-layer flex flex-col justify-between p-3 sm:p-4">
+
+    <!-- TOP ROW -->
+    <div class="flex flex-wrap items-start justify-between gap-2">
+
+      <!-- TOP-LEFT: Station Title & Timer Card -->
+      <div class="hud-interactive glass-card rounded-2xl p-3.5 w-64 sm:w-72 transition-all">
+        <div class="flex items-center justify-between text-xs mb-1">
+          <span id="hud-phase-label" class="font-semibold text-teal-700">Waktu persiapan</span>
+          <span id="hud-mode-badge" class="text-teal-700 font-bold">Kandidat Peserta</span>
+        </div>
+        <div class="flex items-baseline justify-between my-1">
+          <h2 id="hud-station-title" class="text-2xl font-extrabold text-slate-800 tracking-tight">Station 01</h2>
+          <div id="hud-timer" class="text-2xl font-bold text-teal-700 tabular-nums">00:30</div>
+        </div>
+        <div id="hud-station-subtitle" class="text-[11px] text-slate-500 font-medium truncate mb-2.5">
+          Pembuatan 1: Perancangan Sediaan (R&D)
+        </div>
+        <div class="flex items-center gap-1.5">
+          <button id="btn-skip-phase" type="button" class="w-full py-2 px-3 rounded-xl bg-slate-100 hover:bg-teal-50 hover:text-teal-800 text-slate-700 font-semibold text-xs flex items-center justify-center gap-1.5 border border-slate-200 transition">
+            <span id="btn-skip-label">Lewati sisa waktu</span>
+            <span>→</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- TOP-CENTER: Controls Hint & Concurrency Telemetry -->
+      <div class="hud-interactive flex flex-col items-center gap-1.5 mx-auto">
+        <div class="glass-card rounded-xl px-3.5 py-2 flex flex-wrap items-center justify-center gap-2 text-xs text-slate-700">
+          <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded text-[11px] font-semibold">WASD</kbd> Bergerak</span>
+          <span class="text-slate-300">|</span>
+          <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded text-[11px] font-semibold">Drag/Mouse</kbd> Melihat</span>
+          <span class="text-slate-300">|</span>
+          <span class="inline-flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded text-[11px] font-semibold">E</kbd> Gunakan</span>
+          <span class="text-slate-300 hidden sm:inline">|</span>
+          <button id="btn-toggle-camera" type="button" class="text-teal-700 hover:text-teal-900 font-semibold inline-flex items-center gap-1 transition" title="Ganti Sudut Pandang Kamera (1st/3rd Person)">
+            <kbd class="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded text-[11px] font-semibold">V</kbd>
+            <span id="cam-hint-label">Kamera Orang ke-3</span>
+          </button>
+          <span class="text-slate-300 hidden sm:inline">|</span>
+          <button id="btn-toggle-peers" type="button" class="text-indigo-700 hover:text-indigo-900 font-bold inline-flex items-center gap-1 transition" title="Lihat Mahasiswa Online di Lorong Ini">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>👥 Mahasiswa (10)</span>
+          </button>
+          <span class="text-slate-300 hidden sm:inline">|</span>
+          <button id="btn-open-map" type="button" class="text-teal-700 hover:text-teal-900 font-semibold underline decoration-teal-500/50">
+            Peta 10 Station
+          </button>
+        </div>
+
+        <!-- 2,000 Concurrent Users Telemetry Bar -->
+        <div class="glass-dark text-white rounded-full px-3.5 py-1 text-[11px] flex items-center gap-2.5 shadow-md">
+          <span class="flex items-center gap-1.5 text-emerald-400 font-semibold">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span id="telemetry-users">2.000 Peserta Online</span>
+          </span>
+          <span class="text-slate-500">•</span>
+          <span id="telemetry-cluster" class="text-slate-200">Instance #014/200 (10 Kandidat/Lorong)</span>
+          <span class="text-slate-500 hidden md:inline">•</span>
+          <span id="telemetry-assessor-mode" class="hidden md:inline text-amber-300 font-medium">Sharding: Room Paralel</span>
+        </div>
+      </div>
+
+      <!-- TOP-RIGHT: Dosen Tools, Blueprint, Audio, Menu -->
+      <div class="hud-interactive flex flex-col items-end gap-1.5">
+        <div class="flex flex-wrap items-center justify-end gap-1.5">
+          <!-- Tombol Switch 2 Koridor Sekaligus -->
+          <button id="btn-toggle-corridor" type="button" class="glass-card px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-teal-800 hover:bg-teal-50 flex items-center gap-1 shadow-sm transition" title="Pindah antara Koridor A dan Koridor B">
+            <span>🏢</span>
+            <span id="label-corridor-wing">Koridor A (01-10)</span>
+          </button>
+          <!-- Tombol Cek Hasil Nilai Ujian Mahasiswa -->
+          <button id="btn-view-score" type="button" class="glass-card px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-indigo-700 hover:bg-indigo-50 flex items-center gap-1 shadow-sm transition" title="Lihat Rekap Nilai Ujian & Pembahasan">
+            <span>📊</span>
+            <span>Nilai Ujian</span>
+          </button>
+          <!-- Tombol Download / Install PWA (Laptop & HP) -->
+          <button id="btn-pwa-install" type="button" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1.5 rounded-xl text-[11px] font-bold shadow-md flex items-center gap-1 transition animate-bounce" title="Unduh Aplikasi ke Laptop / HP">
+            <span>📲</span>
+            <span>Install App</span>
+          </button>
+          <!-- Tombol Khusus Dosen: Edit Petunjuk Pintu Ruangan -->
+          <button id="btn-dosen-edit-prompt" type="button" class="hidden bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg flex items-center gap-1.5 transition">
+            <span>✏️</span>
+            <span>Edit Petunjuk</span>
+          </button>
+          <button id="btn-toggle-voice" type="button" class="glass-card px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-700 hover:bg-white flex items-center gap-1.5" title="Suara Pengumuman OSCE">
+            <span id="voice-icon">🔊</span>
+            <span id="voice-label" class="hidden sm:inline">Suara</span>
+          </button>
+          <button id="btn-open-blueprint" type="button" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg flex items-center gap-1.5 transition">
+            <span>📐</span>
+            <span class="hidden sm:inline">Blueprint</span>
+          </button>
+          <button id="btn-hud-lang" type="button" onclick="OSCE_I18N.toggleLanguage()" class="btn-lang-switch glass-card px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 hover:bg-white flex items-center gap-1" title="Ganti Bahasa (ID / EN)">
+            🇮🇩 <span>ID</span>
+          </button>
+          <button id="btn-open-menu" type="button" class="glass-card px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-700 hover:bg-white flex items-center gap-1">
+            <span>Menu</span>
+            <kbd class="hidden sm:inline px-1 py-0.5 bg-slate-100 border border-slate-300 rounded text-[9px]">Esc</kbd>
+          </button>
+        </div>
+
+        <!-- Mode Rotasi -->
+        <div class="glass-card rounded-xl px-2.5 py-1.5 flex items-center gap-2 text-[11px]">
+          <span class="text-slate-500 font-medium">Rotasi:</span>
+          <select id="select-movement-mode" class="bg-slate-100 border border-slate-200 rounded-lg px-2 py-0.5 font-semibold text-slate-700 focus:outline-none">
+            <option value="hybrid">Hibrida (WASD + Auto-Teleport)</option>
+            <option value="walk">Jalan Manual (WASD ke Pintu)</option>
+            <option value="map">Klik Peta Station</option>
+            <option value="auto">Otomatis Pindah Station</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- PANEL KHUSUS DOSEN / ASESOR PENGUJI (Muncul Otomatis saat Login Asesor) -->
+    <div id="live-assessor-panel" class="hud-interactive fixed right-4 top-28 w-72 glass-assessor text-white rounded-2xl p-3.5 hidden z-20 shadow-2xl border border-amber-500/40">
+      <div class="flex items-center justify-between border-b border-amber-500/30 pb-2 mb-2.5">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+          <span class="text-xs font-black tracking-wide text-amber-200 uppercase">DASHBOARD ASESOR RESMI</span>
+        </div>
+        <span class="px-2 py-0.5 bg-amber-500 text-slate-950 font-extrabold text-[10px] rounded">PENGUJI</span>
+      </div>
+      <div class="bg-slate-900/80 rounded-xl p-2.5 mb-2.5 border border-amber-500/30">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-full bg-amber-600 text-white flex items-center justify-center font-bold text-xs">AS</div>
+          <div class="min-w-0">
+            <div id="assessor-name" class="text-xs font-bold truncate">Dosen Penguji</div>
+            <div id="assessor-role" class="text-[10px] text-amber-300">Asesor UKMPPAI • Live Scoring</div>
+          </div>
+        </div>
+      </div>
+      <div id="assessor-rubrik-content"></div>
+    </div>
+
+    <!-- PEERS MULTIPLAYER FLOATING PANEL (10 Mahasiswa di Lorong Ini) -->
+    <div id="panel-peers" class="hud-interactive fixed left-4 top-28 w-80 glass-dark text-white rounded-2xl p-4 hidden z-20 shadow-2xl border border-slate-700 animate-fadeIn">
+      <div class="flex items-center justify-between border-b border-slate-700 pb-2.5 mb-3">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <div>
+            <div class="text-xs font-bold tracking-wide">MAHASISWA DI LORONG INI</div>
+            <div class="text-[10px] text-slate-400">Instance #014 • 10 Kandidat Serentak</div>
+          </div>
+        </div>
+        <button id="btn-close-peers" type="button" class="text-slate-400 hover:text-white text-xs font-bold px-1.5 py-0.5 rounded">✕</button>
+      </div>
+
+      <div class="bg-indigo-950/70 rounded-xl p-2.5 mb-3 border border-indigo-400/30 text-[11px] text-indigo-100 leading-snug">
+        <div class="font-bold text-indigo-200 mb-0.5 flex items-center gap-1.5">
+          <span>🩺</span> Avatar 3D Lengkap Real-Time
+        </div>
+        Setiap peserta memiliki avatar manusia lengkap: <strong>Mata</strong>, <strong>Tangan</strong>, <strong>Kaki</strong>, <strong>Jas Snelli</strong>, <strong>Sepatu Pantofel</strong>, dan <strong>Kartu Tanda Pengenal di dada kanan</strong>. Buka tab baru di browser Anda untuk melihat 2 mahasiswa bergerak bersamaan!
+      </div>
+
+      <div class="text-[11px] text-slate-300 font-semibold mb-1 flex justify-between px-1">
+        <span>Peserta Ujian</span>
+        <span>Posisi Station</span>
+      </div>
+      <div id="peers-list-container" class="space-y-1.5 max-h-56 overflow-y-auto custom-scroll pr-1 text-xs"></div>
+    </div>
+
+    <!-- BOTTOM ROW -->
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-2 mt-auto">
+      <!-- Left Controls: D-Pad & Exit Room -->
+      <div class="hud-interactive flex items-center gap-1.5">
+        <div class="glass-card rounded-xl p-1.5 flex items-center gap-1">
+          <button id="btn-move-forward" type="button" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-teal-50 text-slate-700 text-xs font-bold">▲ W</button>
+          <button id="btn-move-back" type="button" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-teal-50 text-slate-700 text-xs font-bold">▼ S</button>
+          <button id="btn-turn-left" type="button" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-teal-50 text-slate-700 text-xs font-bold">◀ A</button>
+          <button id="btn-turn-right" type="button" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-teal-50 text-slate-700 text-xs font-bold">D ▶</button>
+        </div>
+        <button id="btn-exit-room" type="button" class="hidden bg-rose-600 hover:bg-rose-500 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-lg transition">
+          ← Keluar ke Koridor
+        </button>
+      </div>
+
+      <!-- Center Action Prompt & Subtitle Banner -->
+      <div class="hud-interactive flex flex-col items-center gap-2 max-w-2xl w-full">
+        <button id="btn-context-action" type="button" class="glass-card px-4 py-2 rounded-xl text-xs font-bold text-slate-800 hover:bg-teal-50 border-2 border-teal-500/40 flex items-center gap-2 shadow-lg transition transform hover:scale-105">
+          <kbd class="px-2 py-0.5 bg-teal-700 text-white rounded text-xs font-extrabold">E</kbd>
+          <span id="context-action-label">Duduk — Station 01</span>
+        </button>
+        <div id="hud-subtitle-banner" class="glass-card rounded-xl px-4 py-2.5 text-center text-xs sm:text-sm font-medium text-slate-700 w-full shadow-md">
+          Selamat datang di OSCE Center. Silakan lengkapi form login untuk memulai.
+        </div>
+      </div>
+
+      <!-- Right Progress -->
+      <div class="hud-interactive relative">
+        <button id="btn-toggle-station-list" type="button" class="glass-card rounded-xl px-3.5 py-2.5 text-xs flex items-center gap-3 hover:bg-white transition">
+          <span class="text-slate-500 font-medium">Urutan station</span>
+          <span id="hud-progress-count" class="font-extrabold text-slate-800">0/10 selesai</span>
+          <span class="text-slate-400">▼</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =======================================================================
+       MODAL 1: FORM LOGIN / GERBANG MASUK PESERTA & ASESOR
+       (Nama - NIM - Pilihan Jenis Kelamin L/P - Peran)
+       ======================================================================= -->
+  <div id="modal-login" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 animate-fadeIn relative">
+      <button type="button" onclick="OSCE_I18N.toggleLanguage()" class="btn-lang-switch absolute top-5 right-5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-teal-50 border border-slate-300 text-xs font-bold text-slate-700 flex items-center gap-1">
+        🇮🇩 <span>ID</span>
+      </button>
+      <div class="text-center mb-6">
+        <div class="w-14 h-14 rounded-2xl bg-teal-600 text-white flex items-center justify-center mx-auto mb-3 shadow-lg text-2xl font-black">
+          🩺
+        </div>
+        <h2 class="text-2xl font-black text-slate-900 tracking-tight">Gerbang Masuk OSCE Center 3D</h2>
+        <p class="text-xs text-slate-500 mt-1">Simulasi Ujian Kompetensi Apoteker & Dokter (UKMPPAI) Berbasis Web</p>
+      </div>
+
+      <div class="space-y-4">
+        <!-- Nama Mahasiswa -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Nama Lengkap Mahasiswa / Dosen:</label>
+          <input type="text" id="login-input-name" placeholder="Masukkan nama lengkap beserta gelar..."
+            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-medium focus:ring-2 focus:ring-teal-500 focus:outline-none" />
+        </div>
+
+        <!-- NIM -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Nomor Induk Mahasiswa (NIM) / NIDN:</label>
+          <input type="text" id="login-input-nim" placeholder="Contoh: 2024-08192"
+            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-mono font-medium focus:ring-2 focus:ring-teal-500 focus:outline-none" />
+        </div>
+
+        <!-- Jenis Kelamin & Model Karakter -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Pilih Jenis Kelamin & Karakter 3D:</label>
+          <select id="login-select-gender" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-none bg-slate-50">
+            <option value="female">👩‍⚕️ Perempuan (Mahasiswi Berhijab Rapi & Jas Snelli)</option>
+            <option value="male">👨‍⚕️ Laki-laki (Mahasiswa Berambut Rapi & Jas Snelli)</option>
+          </select>
+        </div>
+
+        <!-- Peran (Mahasiswa / Dosen Asesor) -->
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Pilih Peran Pengguna:</label>
+          <select id="login-select-role" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-none bg-slate-50">
+            <option value="student">🎓 Mahasiswa / Peserta Ujian OSCE</option>
+            <option value="assessor">👨‍🏫 Dosen / Asesor Penguji (Fitur Input Petunjuk & Rubrik)</option>
+          </select>
+        </div>
+
+        <!-- PIN Asesor (hanya muncul jika peran = Dosen / Asesor) -->
+        <div id="login-pin-wrap" class="hidden">
+          <label class="block text-xs font-bold text-slate-700 mb-1">PIN Asesor (diberikan panitia ujian):</label>
+          <input type="password" id="login-input-pin" placeholder="Masukkan PIN asesor" autocomplete="off"
+            class="w-full px-3.5 py-2.5 rounded-xl border border-amber-400 text-xs font-mono font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none" />
+        </div>
+
+        <!-- KODE KORIDOR (hanya muncul jika peran = Mahasiswa) -->
+        <div id="login-corridor-wrap">
+          <label class="block text-xs font-bold text-slate-700 mb-1">
+            🏫 Kode Koridor Ujian <span class="text-rose-600">*</span>
+            <span class="text-[10px] font-normal text-slate-500 ml-1">(diberikan oleh Dosen/Panitia saat daftar ujian)</span>
+          </label>
+          <input type="text" id="login-input-corridor" placeholder="Contoh: KOR-A-2026 atau KOR-B-2026"
+            autocomplete="off" maxlength="24"
+            class="w-full px-3.5 py-2.5 rounded-xl border border-indigo-400 text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-indigo-50 uppercase tracking-wider" />
+          <div class="text-[10px] text-indigo-700 mt-1">
+            💡 Kode ini menentukan koridor Anda (A atau B). Mahasiswa Koridor A <strong>tidak dapat masuk</strong> ke wilayah Koridor B, dan sebaliknya.
+          </div>
+        </div>
+
+        <div class="bg-teal-50 border border-teal-200 rounded-xl p-3 text-[11px] text-teal-900 leading-relaxed">
+          ✨ <strong>Kartu Tanda Pengenal Otomatis:</strong> Data Nama, NIM, dan Jenis Kelamin yang Anda masukkan akan langsung tertempel pada kartu identitas di baju seragam sebelah kanan avatar 3D Anda!
+        </div>
+
+        <button id="btn-login-submit" type="button" class="w-full py-3 bg-teal-700 hover:bg-teal-600 text-white rounded-xl font-extrabold text-sm shadow-xl transition transform active:scale-98">
+          Masuk ke Simulasi Ujian OSCE →
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =======================================================================
+       MODAL 2: EDIT PETUNJUK RUANGAN OLEH DOSEN / ASESOR
+       (Setiap Ruangan Berbeda & Bisa Di-input Dosen)
+       ======================================================================= -->
+  <div id="modal-edit-instruction" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-40 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-amber-300 max-h-[90vh] flex flex-col animate-fadeIn">
+      <div class="flex items-start justify-between border-b border-slate-200 pb-3 mb-4">
+        <div>
+          <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900">FITUR KHUSUS DOSEN & ASESOR</span>
+          <h3 class="text-xl font-black text-slate-900 mt-1">Input / Edit Petunjuk Ruangan 3D</h3>
+        </div>
+        <button id="btn-close-edit-instruction" type="button" class="text-slate-400 hover:text-slate-700 text-lg font-bold px-2">✕</button>
+      </div>
+
+      <div class="space-y-3 overflow-y-auto custom-scroll pr-1 text-xs">
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Pilih Wilayah Koridor &amp; Ruangan Station yang Ingin Diedit:</label>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
+            <div>
+              <label class="block text-[11px] font-bold text-teal-800 mb-0.5">Wilayah Koridor:</label>
+              <select id="edit-select-wing" class="w-full p-2.5 rounded-xl border border-teal-400 font-bold bg-teal-50 text-teal-900 text-xs">
+                <option value="0">🏢 KORIDOR A (Station 01–10)</option>
+                <option value="1">🏢 KORIDOR B (Station 01–10)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-0.5">Ruangan Station:</label>
+              <select id="edit-select-station" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold bg-slate-50 text-slate-800 text-xs"></select>
+            </div>
+          </div>
+          <div class="text-[11px] text-teal-800 bg-teal-50 border border-teal-200 p-2 rounded-lg">
+            💡 Dosen dapat memberikan paket soal, skenario, tugas, dan kunci jawaban yang <strong>berbeda antara Koridor A dan Koridor B</strong>.
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Judul Topik Station:</label>
+          <input type="text" id="edit-st-title" class="w-full p-2.5 rounded-xl border border-slate-300 font-medium" />
+        </div>
+
+        <div class="bg-amber-50 p-3 rounded-xl border border-amber-200">
+          <label class="block font-bold text-amber-950 mb-1">Tulisan Petunjuk di Papan Depan Pintu 3D (Door Poster):</label>
+          <textarea id="edit-st-door-text" rows="2" class="w-full p-2.5 rounded-xl border border-amber-300 text-xs font-semibold" placeholder="Teks instruksi ringkas yang terlihat langsung di dinding pintu lorong..."></textarea>
+          <div class="text-[10px] text-amber-800 mt-1">💡 Teks ini akan langsung dirender pada tekstur 3D papan di dinding depan pintu lorong.</div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Skenario Lengkap Kasus Klinik / Farmasi:</label>
+          <textarea id="edit-st-scenario" rows="3" class="w-full p-2.5 rounded-xl border border-slate-300 text-xs"></textarea>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Tugas Mahasiswa (Pisahkan dengan baris baru per tugas):</label>
+          <textarea id="edit-st-tasks" rows="3" class="w-full p-2.5 rounded-xl border border-slate-300 text-xs"></textarea>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Kompetensi yang Diuji:</label>
+          <input type="text" id="edit-st-competencies" class="w-full p-2.5 rounded-xl border border-slate-300 font-medium" />
+        </div>
+
+        <div class="bg-teal-50 p-3.5 rounded-xl border border-teal-300 space-y-2.5">
+          <div class="font-extrabold text-teal-950 text-xs flex items-center justify-between">
+            <span>📝 Buat Soal Keputusan &amp; Kunci Jawaban Otomatis (Auto-Grading Real-Time)</span>
+            <span class="px-2 py-0.5 rounded bg-teal-700 text-white text-[10px]">Koreksi Otomatis</span>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-800 mb-1">Pertanyaan Tugas / Soal Keputusan Mahasiswa:</label>
+            <input type="text" id="edit-st-question" class="w-full p-2 rounded-lg border border-slate-300 text-xs font-semibold bg-white" placeholder="Contoh: Berapa bobot Span 80 & Tween 80 yang harus ditimbang?" />
+          </div>
+          <div class="grid grid-cols-1 gap-2">
+            <div>
+              <label class="block font-bold text-emerald-900 mb-0.5 text-[11px]">Pilihan A:</label>
+              <input type="text" id="edit-st-opt0" class="w-full p-2 rounded-lg border border-slate-300 text-xs bg-white" />
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-0.5 text-[11px]">Pilihan B:</label>
+              <input type="text" id="edit-st-opt1" class="w-full p-2 rounded-lg border border-slate-300 text-xs bg-white" />
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-0.5 text-[11px]">Pilihan C:</label>
+              <input type="text" id="edit-st-opt2" class="w-full p-2 rounded-lg border border-slate-300 text-xs bg-white" />
+            </div>
+          </div>
+          <div>
+            <label class="block font-bold text-teal-950 mb-1 text-[11px]">Pilih Kunci Jawaban yang BENAR (Untuk Koreksi Otomatis ke Dosen):</label>
+            <select id="edit-st-correct" class="w-full p-2 rounded-lg border border-teal-500 bg-white font-bold text-teal-950 text-xs">
+              <option value="0">Pilihan A adalah Kunci Jawaban BENAR</option>
+              <option value="1">Pilihan B adalah Kunci Jawaban BENAR</option>
+              <option value="2">Pilihan C adalah Kunci Jawaban BENAR</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 mt-4 pt-3 border-t border-slate-200">
+        <button id="btn-cancel-edit-instruction" type="button" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs">
+          Batal
+        </button>
+        <button id="btn-save-edit-instruction" type="button" class="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shadow-md">
+          Simpan Petunjuk & Pasang di Pintu 3D →
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: PETUNJUK PESERTA (Door Instruction Sheet) -->
+  <div id="modal-instruction" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-30 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 animate-fadeIn">
+      <div class="flex items-start justify-between border-b border-slate-200 pb-3 mb-4">
+        <div>
+          <span id="inst-badge" class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-indigo-100 text-indigo-800">STATION 01</span>
+          <h3 id="inst-title" class="text-xl font-extrabold text-slate-900 mt-1">Petunjuk Peserta Ujian OSCE</h3>
+        </div>
+        <button id="btn-close-instruction" type="button" class="text-slate-400 hover:text-slate-700 text-lg font-bold px-2">✕</button>
+      </div>
+
+      <div class="space-y-3 text-xs sm:text-sm text-slate-700 custom-scroll max-h-[60vh] overflow-y-auto pr-1">
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-3">
+          <div class="font-bold text-amber-900 mb-1">Skenario Kasus:</div>
+          <p id="inst-scenario" class="text-amber-950 leading-relaxed"></p>
+        </div>
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
+          <div class="font-bold text-slate-900 mb-1.5">Tugas Kandidat:</div>
+          <ul id="inst-tasks" class="list-disc list-inside space-y-1 text-slate-700"></ul>
+        </div>
+        <div class="bg-teal-50 border border-teal-200 rounded-xl p-3 flex items-center justify-between">
+          <div>
+            <div class="font-bold text-teal-900 text-xs">Kompetensi Utama:</div>
+            <div id="inst-competencies" class="text-teal-800 text-xs mt-0.5"></div>
+          </div>
+          <span id="inst-door-status" class="px-2.5 py-1 rounded-lg font-bold text-xs bg-amber-200 text-amber-900">Pintu Terkunci</span>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-end gap-2 mt-5 pt-3 border-t border-slate-200">
+        <button id="btn-inst-sit" type="button" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs">
+          Duduk di Kursi Tunggu
+        </button>
+        <button id="btn-inst-enter" type="button" class="px-4 py-2 rounded-xl bg-teal-700 hover:bg-teal-600 text-white font-bold text-xs shadow-md">
+          Buka Pintu & Masuk Station →
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 4: PETA 10 STATION -->
+  <div id="modal-map" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-30 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-4xl w-full p-6 shadow-2xl border border-slate-200 max-h-[85vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-3 mb-4">
+        <div>
+          <h3 class="text-xl font-extrabold text-slate-900">Peta Rotasi 10 Station UKMPPAI</h3>
+          <p class="text-xs text-slate-500">Standar Cetak Biru (Blueprint) Uji Kompetensi Apoteker</p>
+        </div>
+        <button id="btn-close-map" type="button" class="text-slate-400 hover:text-slate-700 text-lg font-bold px-2">✕</button>
+      </div>
+
+      <div class="overflow-y-auto custom-scroll flex-1 pr-1">
+        <table class="w-full text-xs text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+              <th class="p-2.5 text-center">Kode</th>
+              <th class="p-2.5">Judul Station</th>
+              <th class="p-2.5">Area Kompetensi</th>
+              <th class="p-2.5 text-center">Status</th>
+              <th class="p-2.5 text-center">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="map-stations-tbody" class="divide-y divide-slate-200"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 5: LEMBAR KERJA (WORKSTATION) -->
+  <div id="modal-workstation" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-30 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-3xl w-full p-6 shadow-2xl border border-slate-200 max-h-[90vh] flex flex-col">
+      <div class="flex items-start justify-between border-b border-slate-200 pb-3 mb-3">
+        <div>
+          <span id="workstation-badge" class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-teal-100 text-teal-800">STATION AKTIF</span>
+          <h3 id="workstation-title" class="text-xl font-black text-slate-900 mt-1">Lembar Kerja & Interaksi 3D</h3>
+        </div>
+        <button id="btn-close-workstation" type="button" class="text-slate-400 hover:text-slate-700 text-lg font-bold px-2">✕</button>
+      </div>
+
+      <div class="flex items-center gap-2 mb-3 border-b border-slate-200 pb-2">
+        <button id="tab-work-npc" type="button" class="px-3.5 py-1.5 rounded-xl bg-teal-700 text-white font-bold text-xs">💬 Dialog Pasien / Penguji</button>
+        <button id="tab-work-lab" type="button" class="px-3.5 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold text-xs">🔬 Data Laboratorium & Alat</button>
+        <button id="tab-work-form" type="button" class="px-3.5 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold text-xs">📝 Keputusan & Rubrik</button>
+      </div>
+
+      <div id="workstation-tab-content" class="overflow-y-auto custom-scroll flex-1 pr-1 text-xs"></div>
+
+      <div class="flex items-center justify-between pt-3 mt-3 border-t border-slate-200">
+        <div class="text-[11px] text-slate-500">Pastikan seluruh keputusan telah diisi sebelum menyelesaikan stasiun.</div>
+        <button id="btn-complete-station" type="button" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl font-bold text-xs shadow-md">
+          Selesaikan Tugas Station Ini ✓
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 6: BLUEPRINT & ARSITEKTUR TEKNIS -->
+  <div id="modal-blueprint" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-40 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-5xl w-full p-6 shadow-2xl border border-slate-200 max-h-[90vh] flex flex-col">
+      <div class="flex items-start justify-between border-b border-slate-200 pb-3 mb-4">
+        <div>
+          <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-100 text-indigo-800">DOKUMEN TEKNIS & PERANCANGAN SISTEM</span>
+          <h3 class="text-xl font-extrabold text-slate-900 mt-1">Blueprint & Arsitektur Virtual OSCE (2.000 Mahasiswa Serentak)</h3>
+        </div>
+        <button id="btn-close-blueprint" type="button" class="text-slate-400 hover:text-slate-700 text-lg font-bold px-2">✕</button>
+      </div>
+
+      <div class="flex items-center gap-2 mb-3 border-b border-slate-200 pb-2 text-xs">
+        <button id="btn-bp-tab-algo" type="button" class="px-3.5 py-1.5 rounded-xl bg-indigo-700 text-white font-bold">1. Algoritma Rotasi</button>
+        <button id="btn-bp-tab-stations" type="button" class="px-3.5 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200">2. Matriks 10 Station</button>
+        <button id="btn-bp-tab-arch" type="button" class="px-3.5 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200">3. Arsitektur 2.000 Peserta</button>
+        <button id="btn-bp-tab-score" type="button" class="px-3.5 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200">4. Rekap Skor</button>
+      </div>
+
+      <div id="bp-content-algo" class="custom-scroll overflow-y-auto flex-1 space-y-4 pr-1 text-xs text-slate-700">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+            <div class="font-extrabold text-teal-700 mb-1">Tahap 1: Pembagian Cluster</div>
+            <p class="text-xs leading-relaxed">2.000 peserta login. Load Balancer membagi ke dalam <strong>200 Instance Koridor</strong> (10 peserta per koridor, Station 1 s.d. 10).</p>
+          </div>
+          <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+            <div class="font-extrabold text-teal-700 mb-1">Tahap 2: Siklus 11 Menit</div>
+            <p class="text-xs leading-relaxed"><strong>1 Menit Persiapan</strong> (duduk & baca petunjuk pintu) → <strong>9 Menit Kerja</strong> (pintu terbuka) → <strong>1 Menit Rotasi</strong>.</p>
+          </div>
+          <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+            <div class="font-extrabold text-teal-700 mb-1">Tahap 3: Rotasi Otomatis</div>
+            <p class="text-xs leading-relaxed">Bel chime berbunyi. Seluruh 10 peserta bergeser ke station berikutnya secara simultan.</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="bp-content-stations" class="custom-scroll overflow-y-auto flex-1 hidden space-y-3 pr-1 text-xs">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-100 font-bold border-b border-slate-200">
+              <th class="p-2">Kode</th>
+              <th class="p-2">Judul Station</th>
+              <th class="p-2">Area</th>
+              <th class="p-2">Tipe</th>
+              <th class="p-2">Objek 3D</th>
+            </tr>
+          </thead>
+          <tbody id="bp-stations-tbody" class="divide-y divide-slate-200"></tbody>
+        </table>
+      </div>
+
+      <div id="bp-content-arch" class="custom-scroll overflow-y-auto flex-1 hidden space-y-3 pr-1 text-xs text-slate-700">
+        <div class="bg-emerald-50 border border-emerald-300 rounded-2xl p-4">
+          <h4 class="font-black text-emerald-950 text-sm mb-1">Mengapa 2.000 Peserta Serentak Pasti Bisa Berjalan Mulus?</h4>
+          <p class="text-xs text-emerald-900 leading-relaxed">
+            Kuncinya adalah <strong>Instance Koridor Sharding (200 Room Paralel x 10 Mahasiswa)</strong>. Server tidak merender grafik dan tidak menumpuk 2.000 orang di 1 layar, melainkan menyinkronkan 10 mahasiswa per koridor. Beban jaringan per user hanya &lt; 0.3 KB/s dan grafis 3D WebGL berjalan sangat mulus 60 FPS di laptop/HP mahasiswa.
+          </p>
+        </div>
+      </div>
+
+      <div id="bp-content-score" class="custom-scroll overflow-y-auto flex-1 hidden space-y-3 pr-1 text-xs">
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+          <div class="font-bold text-slate-900 mb-2">Rekapitulasi Nilai Ujian OSCE:</div>
+          <p class="text-xs text-slate-600">Nilai akan otomatis terisi saat tugas stasiun diselesaikan atau diinput oleh Dosen Penguji.</p>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between mt-4 pt-3 border-t border-slate-200">
+        <div class="text-xs text-slate-500">Standar Cetak Biru UKAI Metode OSCE — IAI & APTFI</div>
+        <button id="btn-close-blueprint-bottom" type="button" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs">
+          Kembali ke Simulasi 3D
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 7: MENU PENGATURAN (Esc) -->
+  <div id="modal-menu" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-40 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-3 mb-4">
+        <h3 class="text-lg font-black text-slate-900">Pengaturan Simulasi OSCE</h3>
+        <button id="btn-close-menu" type="button" class="text-slate-400 hover:text-slate-700 text-lg font-bold px-2">✕</button>
+      </div>
+      <div class="space-y-3 text-xs">
+        <button id="btn-resume-sim" type="button" class="w-full py-2.5 px-4 rounded-xl bg-teal-700 hover:bg-teal-600 text-white font-bold text-xs shadow-md">
+          Lanjutkan Simulasi ▶
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 8: REKAPITULASI HASIL NILAI UJIAN OSCE (BENAR / SALAH / PEMBAHASAN) -->
+  <div id="modal-scoring-result" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden items-center justify-center p-3 sm:p-4 animate-fadeIn">
+    <div class="bg-white rounded-3xl max-w-2xl w-full p-5 sm:p-7 shadow-2xl border border-slate-200 max-h-[92vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-3 mb-3">
+        <div>
+          <span id="score-status-badge" class="px-3 py-1 rounded-full text-xs font-black bg-emerald-500 text-white shadow">HASIL UJIAN OSCE</span>
+          <h3 class="text-xl font-black text-slate-900 mt-1">Laporan Kelulusan & Nilai Station</h3>
+        </div>
+        <button id="btn-close-score-result" type="button" class="text-slate-400 hover:text-slate-700 text-xl font-bold px-2 py-1">✕</button>
+      </div>
+
+      <!-- Header Nilai & Status -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3 text-center">
+        <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl">
+          <div class="text-[10px] text-slate-500 font-bold uppercase">Nama Kandidat</div>
+          <div id="score-student-name" class="font-bold text-xs text-slate-800 truncate">apt. Siti Rahmawati</div>
+        </div>
+        <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl">
+          <div class="text-[10px] text-slate-500 font-bold uppercase">NIM</div>
+          <div id="score-student-nim" class="font-mono font-bold text-xs text-slate-800">2024-08192</div>
+        </div>
+        <div class="p-3 bg-teal-50 border border-teal-200 rounded-2xl">
+          <div class="text-[10px] text-teal-700 font-bold uppercase">Nilai Rata-rata</div>
+          <div id="score-final-val" class="font-black text-lg text-teal-800">0.0</div>
+        </div>
+        <div class="p-3 bg-indigo-50 border border-indigo-200 rounded-2xl">
+          <div class="text-[10px] text-indigo-700 font-bold uppercase">Grade Mutu</div>
+          <div id="score-final-grade" class="font-black text-lg text-indigo-800">-</div>
+        </div>
+      </div>
+
+      <!-- Breakdown Stasiun -->
+      <div class="text-xs font-bold text-slate-700 mb-1">Rincian Hasil Per Station (Benar / Salah & Pembahasan):</div>
+      <div id="score-stations-breakdown" class="space-y-2 overflow-y-auto custom-scroll flex-1 pr-1 mb-3"></div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center justify-between border-t border-slate-200 pt-3 gap-2">
+        <button id="btn-export-csv" type="button" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl font-bold text-xs shadow flex items-center gap-1.5 transition">
+          <span>📥</span>
+          <span>Download Rekap Nilai Resmi (CSV)</span>
+        </button>
+        <button id="btn-close-score-bottom" type="button" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold text-xs transition">
+          Tutup
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 9: REKAP HASIL SEMUA PESERTA (KHUSUS DOSEN / ASESOR) -->
+  <div id="modal-assessor-scores" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden items-center justify-center p-3 animate-fadeIn">
+    <div class="bg-white rounded-3xl max-w-4xl w-full p-5 shadow-2xl border border-amber-300 max-h-[92vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-3 mb-3">
+        <div>
+          <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900">KHUSUS DOSEN &amp; ASESOR</span>
+          <h3 class="text-lg font-black text-slate-900 mt-1">Hasil Benar / Salah Seluruh Peserta</h3>
+        </div>
+        <button id="btn-close-assessor-scores" type="button" class="text-slate-400 hover:text-slate-700 text-xl font-bold px-2">✕</button>
+      </div>
+      <div class="overflow-auto custom-scroll flex-1 border border-slate-200 rounded-xl">
+        <table class="w-full text-left border-collapse">
+          <thead class="bg-slate-100 text-[11px] font-bold sticky top-0">
+            <tr>
+              <th class="p-2">NIM</th><th class="p-2">Nama</th><th class="p-2 text-center">Room</th>
+              <th class="p-2 text-center">Station</th><th class="p-2 text-center">Jawaban</th>
+              <th class="p-2 text-center">Nilai Sistem</th><th class="p-2 text-center">Nilai Asesor</th><th class="p-2"></th>
+            </tr>
+          </thead>
+          <tbody id="assessor-scores-tbody" class="divide-y divide-slate-200"></tbody>
+        </table>
+      </div>
+      <div class="flex items-center justify-between pt-3 gap-2">
+        <button id="btn-assessor-refresh" type="button" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold text-xs">🔄 Muat Ulang</button>
+        <button id="btn-assessor-csv" type="button" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl font-bold text-xs">📥 Download Semua Nilai (CSV)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODULAR SCRIPTS (ALL FILES ARE WELL UNDER 1,000 LINES) -->
+  <script src="js/i18n.js"></script>
+  <script src="js/stations-data.js"></script>
+  <script src="js/avatar.js"></script>
+  <script src="js/station-models.js"></script>
+  <script src="js/jgu-logo.js"></script>
+  <script src="js/scene-environment.js"></script>
+  <script src="js/station-simulations.js"></script>
+  <script src="js/ai-patient.js"></script>
+  <script src="js/multiplayer.js"></script>
+  <script src="js/network.js"></script>
+  <script src="js/assessor.js"></script>
+  <script src="js/scoring.js"></script>
+  <script src="js/ui-modals.js"></script>
+  <script src="js/ux-minimap-tutorial.js"></script>
+  <script src="js/input.js"></script>
+  <script src="js/pwa.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

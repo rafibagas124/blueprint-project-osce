@@ -1,0 +1,18 @@
+{
+  "id": "/blueprint.html",
+  "name": "OSCE Center 3D — Simulasi & Ujian UKMPPAI",
+  "short_name": "OSCE 3D",
+  "description": "Simulasi ujian OSCE UKMPPAI berbasis web 3D real-time untuk mahasiswa dan asesor",
+  "start_url": "./blueprint.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0f172a",
+  "theme_color": "#0f766e",
+  "lang": "id",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
