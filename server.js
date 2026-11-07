@@ -1,22 +1,22 @@
 // =========================================================================
-// OSCE CENTER 3D — SERVER-AUTHORITATIVE PRODUCTION BACKEND (Node.js >= 18)
-// Fitur:
-//  1. Zero-Dependency .env / .env.production Loader
-//  2. JWT Session Auth (HMAC-SHA256) & Verifikasi Peran Asesor di Server
-//  3. Room Sharding Otomatis (10 Peserta/Koridor, 200 Room Paralel = 2.000 User)
-//  4. Delta Sync 10 Hz + Autosave & Session Resume saat Reconnect
-//  5. Backend AI Proxy (/api/ai-npc) dengan Pembatas Biaya per Peserta (Tanpa
-//     Ekspos API Key di Frontend) + Fallback NLU Pasien Standar
-//  6. Hook Adapter Redis Pub/Sub & PostgreSQL (Otomatis Fallback ke JSON/Memory)
+// OSCE CENTER 3D — SERVER-AUTHORITATIVE BACKEND (Node.js >= 20)
+// Menggunakan Express, Helmet, Rate Limit, WS (WebSocket Library Resmi),
+// Validasi Kontrak Zod, dan Abstraksi Store (FileStore/MemoryStore)
 // =========================================================================
 
 const http = require("http");
-const https = require("https");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+const express = require("express");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
+const { WebSocketServer, WebSocket } = require("ws");
 
-// 1. Load .env / .env.production secara otomatis tanpa package tambahan
+const { parseWsMessage } = require("./src/schemas/messages");
+const { getStore } = require("./src/store");
+
+// ------------------------------------------------------------- Env Loader ---
 function loadDotEnv() {
   const envFile = process.env.NODE_ENV === "production" ? ".env.production" : ".env";
   const fullPath = path.join(__dirname, envFile);
@@ -45,22 +45,11 @@ const JWT_SECRET = process.env.JWT_SECRET || "osce-ukmppai-dev-secret-key-2026";
 const AI_PROVIDER = (process.env.AI_PROVIDER || "gemini").toLowerCase();
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
-const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
 const AI_MAX_COST_USD = parseFloat(process.env.AI_MAX_COST_PER_STUDENT_USD || "0.15");
 const AI_MAX_TURNS = parseInt(process.env.AI_MAX_TURNS_PER_STATION || "25", 10);
 
-const MAX_PAYLOAD = 32 * 1024;
 const FLUSH_MS = 100; // 10 Hz Server-Authoritative Position Sync
-const DATA_DIR = path.join(__dirname, "data");
-const SCORES_FILE = path.join(DATA_DIR, "scores.json");
-
-const MIME = {
-  ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8",
-  ".js": "application/javascript; charset=utf-8", ".json": "application/json; charset=utf-8",
-  ".png": "image/png", ".jpg": "image/jpeg", ".svg": "image/svg+xml", ".ico": "image/x-icon",
-  ".webmanifest": "application/manifest+json", ".glb": "model/gltf-binary", ".gltf": "model/gltf+json"
-};
+const store = getStore();
 
 // --------------------------------------------------------- JWT Helper ---
 function signJwt(payload) {
@@ -78,19 +67,6 @@ function isValidAssessorPin(pin) {
 const rooms = new Map();       // roomId -> { id, clients:Set, pending:Map }
 const clients = new Map();     // clientId -> client
 const aiUsage = new Map();     // nim -> { turns, costUsd }
-let scores = {};               // key = nim -> { name, nim, role, stations:{idx:{...}}, updatedAt }
-let scoresDirty = false;
-
-try {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  if (fs.existsSync(SCORES_FILE)) scores = JSON.parse(fs.readFileSync(SCORES_FILE, "utf8"));
-} catch (e) { console.warn("Gagal memuat scores.json:", e.message); }
-
-setInterval(() => {
-  if (!scoresDirty) return;
-  scoresDirty = false;
-  fs.writeFile(SCORES_FILE, JSON.stringify(scores, null, 2), () => {});
-}, 3000);
 
 function getRoom(id) {
   if (!rooms.has(id)) rooms.set(id, { id, clients: new Set(), pending: new Map() });
@@ -111,66 +87,34 @@ function assignRoom(role, requested) {
   }
 }
 
-// ----------------------------------------------------------- WebSocket ---
-function wsAccept(key) {
-  return crypto.createHash("sha1")
-    .update(key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").digest("base64");
-}
-
-function wsFrame(str) {
-  const payload = Buffer.from(str, "utf8");
-  const len = payload.length;
-  let header;
-  if (len < 126) { header = Buffer.from([0x81, len]); }
-  else if (len < 65536) { header = Buffer.alloc(4); header[0] = 0x81; header[1] = 126; header.writeUInt16BE(len, 2); }
-  else { header = Buffer.alloc(10); header[0] = 0x81; header[1] = 127; header.writeBigUInt64BE(BigInt(len), 2); }
-  return Buffer.concat([header, payload]);
-}
-
 function send(client, obj) {
-  if (client.socket.destroyed || !client.socket.writable) return;
-  client.socket.write(wsFrame(typeof obj === "string" ? obj : JSON.stringify(obj)));
+  if (!client || !client.ws || client.ws.readyState !== WebSocket.OPEN) return;
+  client.ws.send(typeof obj === "string" ? obj : JSON.stringify(obj));
 }
 
-function parseFrames(client, chunk) {
-  client.buf = client.buf ? Buffer.concat([client.buf, chunk]) : chunk;
-  while (client.buf.length >= 2) {
-    const b = client.buf;
-    const opcode = b[0] & 0x0f;
-    const masked = (b[1] & 0x80) !== 0;
-    let len = b[1] & 0x7f;
-    let offset = 2;
-    if (len === 126) { if (b.length < 4) return; len = b.readUInt16BE(2); offset = 4; }
-    else if (len === 127) { if (b.length < 10) return; len = Number(b.readBigUInt64BE(2)); offset = 10; }
-    if (len > MAX_PAYLOAD) { client.socket.destroy(); return; }
-    const need = offset + (masked ? 4 : 0) + len;
-    if (b.length < need) return;
-    let payload = b.subarray(offset + (masked ? 4 : 0), need);
-    if (masked) {
-      const mask = b.subarray(offset, offset + 4);
-      const out = Buffer.alloc(len);
-      for (let i = 0; i < len; i++) out[i] = payload[i] ^ mask[i & 3];
-      payload = out;
-    }
-    client.buf = b.subarray(need);
-    if (opcode === 0x8) { client.socket.end(); return; }
-    if (opcode === 0x9) { client.socket.write(Buffer.concat([Buffer.from([0x8a, payload.length]), payload])); continue; }
-    if (opcode === 0x1) handleMessage(client, payload.toString("utf8"));
-  }
-}
-
-// --------------------------------------------------------------- Logic ---
 function broadcastRoomInfo(room) {
   const list = [];
-  room.clients.forEach((c) => list.push({ clientId: c.id, name: c.name, nim: c.nim, role: c.role, gender: c.gender, wing: c.wing }));
+  room.clients.forEach((c) => list.push({
+    clientId: c.id,
+    name: c.name,
+    nim: c.nim,
+    role: c.role,
+    gender: c.gender,
+    wing: c.wing
+  }));
   const msg = JSON.stringify({ type: "roster", room: room.id, count: list.length, list });
   room.clients.forEach((c) => send(c, msg));
 }
 
-function handleMessage(client, text) {
+// -------------------------------------------------------- WebSocket Logic ---
+async function handleWsMessage(client, rawText) {
   let m;
-  try { m = JSON.parse(text); } catch (e) { return; }
-  if (!m || typeof m.type !== "string") return;
+  try {
+    m = parseWsMessage(rawText);
+  } catch (err) {
+    send(client, { type: "error", code: "validation_error", message: `Input tidak valid: ${err.message}` });
+    return;
+  }
 
   if (m.type === "join") {
     if (client.joined) return;
@@ -182,15 +126,18 @@ function handleMessage(client, text) {
     client.id = String(m.clientId || crypto.randomUUID()).slice(0, 40);
     client.name = String(m.name || "Peserta").slice(0, 60);
     client.nim = String(m.nim || "-").slice(0, 30);
-    client.gender = m.gender === "female" ? "female" : "male";
+    client.gender = (m.gender === "female" || m.gender === "P") ? "female" : "male";
     client.role = role;
     client.roomId = assignRoom(role, m.room);
     client.joined = true;
 
+    // Putuskan koneksi lama jika ada duplicate ID/NIM
     const old = clients.get(client.id);
-    if (old && old !== client) old.socket.destroy();
+    if (old && old !== client) old.ws.terminate();
     if (role === "student") {
-      clients.forEach((c) => { if (c !== client && c.role === "student" && c.nim === client.nim) c.socket.destroy(); });
+      clients.forEach((c) => {
+        if (c !== client && c.role === "student" && c.nim === client.nim) c.ws.terminate();
+      });
     }
     clients.set(client.id, client);
 
@@ -206,7 +153,23 @@ function handleMessage(client, text) {
     room.clients.add(client);
 
     const jwtToken = signJwt({ sub: client.nim, name: client.name, role: client.role, room: client.roomId });
-    const existingRecord = scores[client.nim];
+
+    // Cek riwayat nilai dari Store untuk sesi resume
+    let resumedStations = null;
+    try {
+      const subs = await store.listSubmissions({ examGroupId: String(client.roomId), nim: client.nim });
+      if (subs && subs.length > 0) {
+        resumedStations = {};
+        subs.forEach((s) => {
+          resumedStations[s.stationNo - 1] = {
+            selected: s.selectedOption,
+            isCorrect: s.isCorrect,
+            score: s.finalScore,
+            globalRating: s.isCorrect ? "PASS" : "BORDERLINE"
+          };
+        });
+      }
+    } catch (e) {}
 
     send(client, {
       type: "joined",
@@ -215,7 +178,7 @@ function handleMessage(client, text) {
       capacity: ROOM_CAPACITY,
       clientId: client.id,
       jwtToken,
-      resumedStations: existingRecord ? existingRecord.stations : null
+      resumedStations
     });
     broadcastRoomInfo(room);
     return;
@@ -226,47 +189,118 @@ function handleMessage(client, text) {
 
   if (m.type === "state") {
     room.pending.set(client.id, {
-      id: client.id, x: m.x, z: m.z, yaw: m.yaw, s: m.isSeated ? 1 : 0, mv: m.isMoving ? 1 : 0,
-      v: m.sceneView, st: m.stationIdx
+      id: client.id,
+      x: m.x,
+      z: m.z,
+      yaw: m.yaw,
+      s: m.isSeated ? 1 : 0,
+      mv: m.isMoving ? 1 : 0,
+      v: m.sceneView,
+      st: m.stationIdx
     });
     return;
   }
 
-  if (m.type === "score") {
-    const key = client.nim;
+  if (m.type === "score" || m.type === "submit_decision") {
+    const stationNo = Number(m.stationIdx) + 1; // Konversi 0-indexed ke 1-indexed (1-10)
     const cleanScore = Math.max(0, Math.min(100, Number(m.score) || 0));
     const cleanRating = String(m.globalRating || (m.isCorrect ? "PASS" : "BORDERLINE")).slice(0, 24);
-    const rec = scores[key] || { name: client.name, nim: client.nim, gender: client.gender, room: client.roomId, stations: {} };
-    rec.stations[m.stationIdx] = {
-      selected: m.selected,
-      isCorrect: !!m.isCorrect,
-      score: cleanScore,
-      globalRating: cleanRating,
-      at: new Date().toISOString()
-    };
-    rec.updatedAt = new Date().toISOString();
-    scores[key] = rec;
-    scoresDirty = true;
 
-    // Real-time push hasil koreksi otomatis (Benar/Salah + Skor) ke seluruh Dosen/Asesor
+    // Stasiun 10 adalah istirahat, tolak submit
+    if (stationNo === 10) {
+      send(client, { type: "error", code: "rest_station", message: "Stasiun 10 adalah stasiun istirahat (tidak dinilai)." });
+      return;
+    }
+
+    try {
+      await store.saveSubmission({
+        examGroupId: String(client.roomId),
+        nim: client.nim,
+        nama: client.name,
+        gender: client.gender === "female" ? "P" : "L",
+        corridorCode: client.wing === 1 ? "KOR-B" : "KOR-A",
+        stationNo,
+        selectedOption: m.selected,
+        isCorrect: Boolean(m.isCorrect),
+        score: cleanScore,
+        finalScore: cleanScore,
+        status: "SUBMITTED"
+      });
+    } catch (err) {
+      // Jika duplicate, biarkan idempotent (jangan crash)
+      if (err.name !== "DuplicateSubmissionError") {
+        console.warn("[Store] Gagal menyimpan submission:", err.message);
+      }
+    }
+
+    // Real-time push hasil penilaian ke seluruh Asesor
     const liveEventMsg = JSON.stringify({
       type: "live_score_event",
       name: client.name,
       nim: client.nim,
       room: client.roomId,
       stationIdx: m.stationIdx,
-      isCorrect: !!m.isCorrect,
+      isCorrect: Boolean(m.isCorrect),
       score: cleanScore,
       globalRating: cleanRating,
       timeStr: new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
     });
-    const fullScoresMsg = JSON.stringify({ type: "scores", data: Object.values(scores) });
+
     clients.forEach((c) => {
       if (c.role === "assessor") {
         send(c, liveEventMsg);
-        send(c, fullScoresMsg);
       }
     });
+    return;
+  }
+
+  if (m.type === "assessor_score") {
+    if (client.role !== "assessor") return;
+    const stationNo = Number(m.stationIdx) + 1;
+    const cleanScore = Math.max(0, Math.min(100, Number(m.score) || 0));
+
+    try {
+      const existing = await store.findSubmission(String(client.roomId), m.nim, stationNo);
+      if (existing) {
+        await store.updateSubmission(existing.submissionId, {
+          assessorScore: cleanScore,
+          finalScore: cleanScore,
+          reviewedBy: client.name
+        });
+      }
+    } catch (e) {
+      console.warn("[Store] Gagal update nilai asesor:", e.message);
+    }
+    return;
+  }
+
+  if (m.type === "get_scores") {
+    if (client.role !== "assessor") return;
+    try {
+      const subs = await store.listSubmissions({ examGroupId: String(client.roomId) });
+      const aggregated = {};
+      subs.forEach((s) => {
+        if (!aggregated[s.nim]) {
+          aggregated[s.nim] = { name: s.nama, nim: s.nim, room: s.examGroupId, stations: {} };
+        }
+        aggregated[s.nim].stations[s.stationNo - 1] = {
+          isCorrect: s.isCorrect,
+          score: s.finalScore,
+          assessorScore: s.assessorScore,
+          at: s.submittedAt
+        };
+      });
+      send(client, { type: "scores", data: Object.values(aggregated) });
+    } catch (e) {
+      send(client, { type: "scores", data: [] });
+    }
+    return;
+  }
+
+  if (m.type === "door") {
+    if (client.role !== "assessor") return;
+    const msg = JSON.stringify({ type: "door", phase: m.phase === "work" ? "work" : "prep" });
+    room.clients.forEach((c) => send(c, msg));
     return;
   }
 
@@ -282,31 +316,6 @@ function handleMessage(client, text) {
       if (c !== client) send(c, quizMsg);
     });
     return;
-  }
-
-  if (m.type === "assessor_score") {
-    if (client.role !== "assessor") return;
-    const rec = scores[String(m.nim)];
-    if (!rec) return;
-    rec.stations[m.stationIdx] = Object.assign(rec.stations[m.stationIdx] || {}, {
-      assessorScore: Math.max(0, Math.min(100, Number(m.score) || 0)),
-      assessor: client.name,
-      at: new Date().toISOString()
-    });
-    scoresDirty = true;
-    return;
-  }
-
-  if (m.type === "get_scores") {
-    if (client.role !== "assessor") return;
-    send(client, { type: "scores", data: Object.values(scores) });
-    return;
-  }
-
-  if (m.type === "door") {
-    if (client.role !== "assessor") return;
-    const msg = JSON.stringify({ type: "door", phase: m.phase === "work" ? "work" : "prep" });
-    room.clients.forEach((c) => send(c, msg));
   }
 }
 
@@ -324,7 +333,8 @@ function removeClient(client) {
   client.joined = false;
 }
 
-setInterval(() => {
+// Flush pending movement states tiap 100ms (10 Hz)
+const flushInterval = setInterval(() => {
   rooms.forEach((room) => {
     if (room.pending.size === 0) return;
     const batch = JSON.stringify({ type: "states", list: Array.from(room.pending.values()) });
@@ -332,143 +342,147 @@ setInterval(() => {
     room.clients.forEach((c) => send(c, batch));
   });
 }, FLUSH_MS);
+flushInterval.unref();
 
-// --------------------------------------------------- AI NPC Backend Proxy ---
-function handleAiNpcProxy(req, res) {
-  let body = "";
-  req.on("data", (chunk) => {
-    body += chunk;
-    if (body.length > MAX_PAYLOAD) req.destroy();
+// ---------------------------------------------------- Express App Setup ---
+const app = express();
+
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false
+}));
+
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 180,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Terlalu banyak permintaan API. Coba lagi sebentar." }
+});
+app.use("/api/", apiLimiter);
+
+app.use(express.json({ limit: "64kb" }));
+
+// Endpoint Kesehatan
+app.get("/api/health", (req, res) => {
+  res.json({
+    ok: true,
+    online: clients.size,
+    rooms: rooms.size,
+    capacityPerRoom: ROOM_CAPACITY,
+    storeDriver: process.env.STORE_DRIVER || "file"
   });
-  req.on("end", async () => {
-    let payload;
-    try { payload = JSON.parse(body); } catch (e) {
-      res.writeHead(400, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "Invalid JSON" }));
-      return;
-    }
+});
 
-    const nim = String(payload.nim || "anon");
-    const usage = aiUsage.get(nim) || { turns: 0, costUsd: 0.0 };
-    if (usage.turns >= AI_MAX_TURNS || usage.costUsd >= AI_MAX_COST_USD) {
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({
-        reply: payload.localHint || "Batas sesi dialog stasiun ini telah tercapai. Silakan lanjutkan pengisian keputusan klinis pada lembar kerja.",
-        costUsd: usage.costUsd,
-        rateLimited: true
-      }));
-      return;
-    }
+// Endpoint CSV Nilai Resmi Asesor
+app.get("/api/scores.csv", async (req, res) => {
+  const pin = req.query.pin;
+  if (!isValidAssessorPin(pin)) {
+    return res.status(401).send("PIN asesor diperlukan.");
+  }
 
-    usage.turns += 1;
-    usage.costUsd = +(usage.costUsd + 0.0008).toFixed(4);
-    aiUsage.set(nim, usage);
-
-    // Jika GEMINI_API_KEY diatur di .env, panggil Gemini API dari backend (aman, tidak terekspos ke client)
-    if (AI_PROVIDER === "gemini" && GEMINI_API_KEY) {
-      try {
-        const prompt = `Anda adalah ${payload.npcName} (${payload.npcRole}) pada ujian OSCE Farmasi ${payload.stationCode}. Skenario: ${payload.scenario}. Data Lab: ${payload.labData}. Jawab singkat (maksimal 2 kalimat), realistis sebagai pasien/kolega medis terhadap ucapan kandidat Apoteker berikut: "${payload.message}". Fakta kunci: ${payload.localHint}`;
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
-        const gRes = await fetch(apiUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-        });
-        if (gRes.ok) {
-          const gJson = await gRes.json();
-          const txt = gJson?.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (txt) {
-            res.writeHead(200, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ reply: txt.trim(), costUsd: usage.costUsd, provider: "gemini" }));
-            return;
-          }
-        }
-      } catch (e) {}
-    }
-
-    // Fallback ke Smart Clinical Persona Engine
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({
-      reply: payload.localHint || "Baik Apoteker, silakan periksa parameter klinis di lembar kerja.",
-      costUsd: usage.costUsd,
-      provider: "clinical-persona-engine"
-    }));
-  });
-}
-
-// ----------------------------------------------------------------- HTTP ---
-function scoresCsv() {
-  let csv = "NIM;Nama;Room;Station;Global Rating;Jawaban;Nilai Sistem;Nilai Asesor;Waktu\n";
-  Object.values(scores).forEach((r) => {
-    Object.keys(r.stations).forEach((idx) => {
-      const s = r.stations[idx];
-      csv += `${r.nim};"${r.name}";${r.room};${Number(idx) + 1};${s.globalRating || "PASS"};${s.isCorrect ? "BENAR" : "SALAH"};${s.score};${s.assessorScore ?? ""};${s.at}\n`;
+  try {
+    const subs = await store.listSubmissions();
+    let csv = "NIM;Nama;Room;Station;Status;Nilai Sistem;Nilai Asesor;Waktu\n";
+    subs.forEach((s) => {
+      csv += `${s.nim};"${s.nama}";${s.examGroupId};${s.stationNo};${s.status};${s.score};${s.assessorScore ?? ""};${s.submittedAt}\n`;
     });
-  });
-  return csv;
-}
-
-const server = http.createServer((req, res) => {
-  let url = decodeURIComponent(req.url.split("?")[0]);
-
-  if (url === "/api/health") {
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ ok: true, online: clients.size, rooms: rooms.size, capacityPerRoom: ROOM_CAPACITY }));
-    return;
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", "attachment; filename=nilai_osce.csv");
+    res.send(csv);
+  } catch (e) {
+    res.status(500).send("Gagal menghasilkan file CSV.");
   }
-  if (url === "/api/ai-npc" && req.method === "POST") {
-    handleAiNpcProxy(req, res);
-    return;
-  }
-  if (url === "/api/scores.csv") {
-    const pin = new URL(req.url, "http://x").searchParams.get("pin");
-    if (!isValidAssessorPin(pin)) { res.writeHead(401); res.end("PIN asesor diperlukan"); return; }
-    res.writeHead(200, { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": "attachment; filename=nilai_osce.csv" });
-    res.end(scoresCsv());
-    return;
+});
+
+// Endpoint AI Standardized Patient NPC Proxy
+app.post("/api/ai-npc", async (req, res) => {
+  const payload = req.body || {};
+  const nim = String(payload.nim || "anon");
+  const usage = aiUsage.get(nim) || { turns: 0, costUsd: 0.0 };
+
+  if (usage.turns >= AI_MAX_TURNS || usage.costUsd >= AI_MAX_COST_USD) {
+    return res.json({
+      reply: payload.localHint || "Batas sesi dialog stasiun ini telah tercapai. Silakan lanjutkan pengisian keputusan klinis pada lembar kerja.",
+      costUsd: usage.costUsd,
+      rateLimited: true
+    });
   }
 
-  if (url === "/") url = "/blueprint.html";
-  const filePath = path.join(__dirname, path.normalize(url).replace(/^(\.\.[\/\\])+/, ""));
-  if (!filePath.startsWith(__dirname) || filePath.startsWith(DATA_DIR) || path.basename(filePath).startsWith(".env")) {
-    res.writeHead(403);
-    res.end("Forbidden");
-    return;
+  usage.turns += 1;
+  usage.costUsd = +(usage.costUsd + 0.0008).toFixed(4);
+  aiUsage.set(nim, usage);
+
+  if (AI_PROVIDER === "gemini" && GEMINI_API_KEY) {
+    try {
+      const prompt = `Anda adalah ${payload.npcName} (${payload.npcRole}) pada ujian OSCE Farmasi ${payload.stationCode}. Skenario: ${payload.scenario}. Data Lab: ${payload.labData}. Jawab singkat (maksimal 2 kalimat), realistis sebagai pasien/kolega medis terhadap ucapan kandidat Apoteker berikut: "${payload.message}". Fakta kunci: ${payload.localHint}`;
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+      const gRes = await fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+      });
+      if (gRes.ok) {
+        const gJson = await gRes.json();
+        const txt = gJson?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (txt) {
+          return res.json({ reply: txt.trim(), costUsd: usage.costUsd, provider: "gemini" });
+        }
+      }
+    } catch (e) {}
   }
 
-  fs.stat(filePath, (err, st) => {
-    if (err || !st.isFile()) { res.writeHead(404); res.end("404"); return; }
-    const ext = path.extname(filePath).toLowerCase();
-    res.writeHead(200, { "Content-Type": MIME[ext] || "application/octet-stream", "Cache-Control": "no-cache" });
-    fs.createReadStream(filePath).pipe(res);
+  return res.json({
+    reply: payload.localHint || "Baik Apoteker, silakan periksa parameter klinis di lembar kerja.",
+    costUsd: usage.costUsd,
+    provider: "clinical-persona-engine"
   });
 });
 
-server.on("upgrade", (req, socket) => {
-  if (req.url.split("?")[0] !== "/ws" || !req.headers["sec-websocket-key"]) { socket.destroy(); return; }
-  socket.write(
-    "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n" +
-    `Sec-WebSocket-Accept: ${wsAccept(req.headers["sec-websocket-key"])}\r\n\r\n`
-  );
-  socket.setNoDelay(true);
-  const client = { socket, buf: null, joined: false, alive: true };
-  socket.on("data", (d) => { client.alive = true; parseFrames(client, d); });
-  socket.on("close", () => removeClient(client));
-  socket.on("error", () => socket.destroy());
+// Static Web Server
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "blueprint.html"));
+});
+app.use(express.static(__dirname, { index: "blueprint.html" }));
+
+// ------------------------------------------------ HTTP & WS Server Setup ---
+const server = http.createServer(app);
+const wss = new WebSocketServer({ server, path: "/ws" });
+
+wss.on("connection", (ws, req) => {
+  const client = { ws, joined: false, alive: true };
+
+  ws.on("message", (data) => {
+    client.alive = true;
+    handleWsMessage(client, data.toString("utf8"));
+  });
+
+  ws.on("close", () => removeClient(client));
+  ws.on("error", () => ws.terminate());
 });
 
-setInterval(() => {
+// Heartbeat ping/pong tiap 20 detik
+const heartbeatInterval = setInterval(() => {
   clients.forEach((c) => {
-    if (!c.alive) { c.socket.destroy(); return; }
+    if (!c.alive) {
+      c.ws.terminate();
+      return;
+    }
     c.alive = false;
-    if (c.socket.writable) c.socket.write(Buffer.from([0x89, 0x00]));
+    if (c.ws.readyState === WebSocket.OPEN) c.ws.ping();
   });
 }, 20000);
+heartbeatInterval.unref();
 
-server.listen(PORT, "0.0.0.0", () => {
-  console.log("=======================================================");
-  console.log(` OSCE Center 3D Server  ->  http://localhost:${PORT}/blueprint.html`);
-  console.log(` Kapasitas room: ${ROOM_CAPACITY} peserta • Sync: ${1000 / FLUSH_MS} Hz`);
-  console.log(` PIN asesor: ${ASSESSOR_PIN}  (dikonfigurasi via .env)`);
-  console.log("=======================================================");
-});
+if (require.main === module) {
+  server.listen(PORT, "0.0.0.0", () => {
+    console.log("=======================================================");
+    console.log(` OSCE Center 3D Server (ws library) -> http://localhost:${PORT}/blueprint.html`);
+    console.log(` Kapasitas room: ${ROOM_CAPACITY} peserta • Sync: ${1000 / FLUSH_MS} Hz`);
+    console.log(` Driver Store: ${process.env.STORE_DRIVER || "file"}`);
+    console.log(` PIN asesor: ${ASSESSOR_PIN}`);
+    console.log("=======================================================");
+  });
+}
+
+module.exports = { app, server, wss, store };
