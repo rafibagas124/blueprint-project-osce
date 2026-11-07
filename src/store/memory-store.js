@@ -5,13 +5,16 @@ const {
   BaseStore,
   DuplicateSubmissionError,
   StationRestError,
-  CorridorCapacityError
+  CorridorCapacityError,
+  SeatConflictError,
+  RosterValidationError
 } = require("./store-interface");
 
 class MemoryStore extends BaseStore {
   constructor() {
     super();
     this.students = new Map(); // nim -> student
+    this.assessors = new Map(); // username -> assessor
     this.submissions = new Map(); // submissionId -> submission
     this.submissionKeyIndex = new Map(); // `${examGroupId}:${nim}:${stationNo}` -> submissionId
     this.groupCorridorNims = new Map(); // `${examGroupId}:${corridorCode}` -> Set<nim>
@@ -25,8 +28,48 @@ class MemoryStore extends BaseStore {
 
   async saveStudent(student) {
     if (!student || !student.nim) throw new Error("Student NIM wajib ada.");
-    this.students.set(String(student.nim).trim(), { ...student });
-    return this.students.get(String(student.nim).trim());
+    const cleanNim = String(student.nim).trim();
+
+    // Validasi aturan roster jika field relasional lengkap
+    if (student.gender && student.gender !== "L" && student.gender !== "P") {
+      throw new RosterValidationError("Gender mahasiswa hanya boleh 'L' atau 'P'.");
+    }
+    if (student.corridor && student.corridor !== "KOR-A" && student.corridor !== "KOR-B") {
+      throw new RosterValidationError("Koridor mahasiswa hanya boleh 'KOR-A' atau 'KOR-B'.");
+    }
+    if (student.seat !== undefined && student.seat !== null) {
+      const seatNum = Number(student.seat);
+      if (!Number.isInteger(seatNum) || seatNum < 1 || seatNum > 10) {
+        throw new RosterValidationError("Nomor kursi (seat) mahasiswa wajib bilangan bulat 1-10.");
+      }
+    }
+
+    // Constraint per (group, corridor) jika kedua atribut ada
+    if (student.group && student.corridor) {
+      const groupKey = `${student.group}:${student.corridor}`;
+      const existingInGroupCorridor = Array.from(this.students.values()).filter(
+        (s) => s.group === student.group && s.corridor === student.corridor
+      );
+
+      // 1. Batas maksimal 10 mahasiswa per koridor per group
+      const alreadyExists = existingInGroupCorridor.some((s) => s.nim === cleanNim);
+      if (!alreadyExists && existingInGroupCorridor.length >= 10) {
+        throw new CorridorCapacityError(`Batas maksimal 10 mahasiswa di ${student.corridor} grup ${student.group} tercapai.`);
+      }
+
+      // 2. Unik seat 1-10 per (group, corridor)
+      if (student.seat !== undefined && student.seat !== null) {
+        const seatConflict = existingInGroupCorridor.find(
+          (s) => s.nim !== cleanNim && Number(s.seat) === Number(student.seat)
+        );
+        if (seatConflict) {
+          throw new SeatConflictError(`Seat ${student.seat} sudah ditempati oleh NIM ${seatConflict.nim} pada ${groupKey}.`);
+        }
+      }
+    }
+
+    this.students.set(cleanNim, { ...student, nim: cleanNim });
+    return this.students.get(cleanNim);
   }
 
   async saveStudents(students) {
@@ -43,6 +86,33 @@ class MemoryStore extends BaseStore {
       if (filter.corridor && s.corridor !== filter.corridor) return false;
       if (filter.group && s.group !== filter.group) return false;
       if (filter.gender && s.gender !== filter.gender) return false;
+      return true;
+    });
+  }
+
+  // --- Assessors ---
+  async saveAssessor(assessor) {
+    if (!assessor || !assessor.username) throw new Error("Username asesor wajib ada.");
+    const cleanUsername = String(assessor.username).trim().toLowerCase();
+    const record = {
+      username: cleanUsername,
+      passwordHash: assessor.passwordHash,
+      nama: assessor.nama || cleanUsername,
+      role: assessor.role || "assessor"
+    };
+    this.assessors.set(cleanUsername, record);
+    return { ...record };
+  }
+
+  async findAssessorByUsername(username) {
+    if (!username) return null;
+    return this.assessors.get(String(username).trim().toLowerCase()) || null;
+  }
+
+  async listAssessors(filter = {}) {
+    const list = Array.from(this.assessors.values());
+    return list.filter((a) => {
+      if (filter.role && a.role !== filter.role) return false;
       return true;
     });
   }
@@ -143,6 +213,7 @@ class MemoryStore extends BaseStore {
 
   async clear() {
     this.students.clear();
+    this.assessors.clear();
     this.submissions.clear();
     this.submissionKeyIndex.clear();
     this.groupCorridorNims.clear();
@@ -151,3 +222,4 @@ class MemoryStore extends BaseStore {
 }
 
 module.exports = { MemoryStore };
+

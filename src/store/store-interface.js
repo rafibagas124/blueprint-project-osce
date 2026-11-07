@@ -28,6 +28,22 @@ class CorridorCapacityError extends Error {
   }
 }
 
+class SeatConflictError extends Error {
+  constructor(message = "Nomor kursi (seat) sudah ditempati mahasiswa lain di koridor dan grup ini.") {
+    super(message);
+    this.name = "SeatConflictError";
+    this.code = "SEAT_CONFLICT";
+  }
+}
+
+class RosterValidationError extends Error {
+  constructor(message = "Validasi data roster gagal.") {
+    super(message);
+    this.name = "RosterValidationError";
+    this.code = "ROSTER_VALIDATION_ERROR";
+  }
+}
+
 class BaseStore {
   // --- Students / Roster ---
   async findStudentByNim(nim) {
@@ -44,6 +60,19 @@ class BaseStore {
 
   async listStudents(filter = {}) {
     throw new Error("Method listStudents() must be implemented");
+  }
+
+  // --- Assessors / Users ---
+  async saveAssessor(assessor) {
+    throw new Error("Method saveAssessor() must be implemented");
+  }
+
+  async findAssessorByUsername(username) {
+    throw new Error("Method findAssessorByUsername() must be implemented");
+  }
+
+  async listAssessors(filter = {}) {
+    throw new Error("Method listAssessors() must be implemented");
   }
 
   // --- Submissions ---
@@ -82,5 +111,8 @@ module.exports = {
   BaseStore,
   DuplicateSubmissionError,
   StationRestError,
-  CorridorCapacityError
+  CorridorCapacityError,
+  SeatConflictError,
+  RosterValidationError
 };
+

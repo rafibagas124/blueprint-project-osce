@@ -46,13 +46,7 @@ function connectWebSocket() {
     netSocket.send(JSON.stringify({
       type: "join",
       clientId: state.clientId,
-      name: state.userProfile.name,
-      nim: state.userProfile.nim,
-      gender: state.userProfile.gender,
-      role: state.userProfile.role,
-      pin: state.assessorPin,
-      wing: state.wing,
-      corridorCode: state.corridorCode
+      token: state.jwtToken
     }));
   };
 
@@ -262,7 +256,14 @@ function handleServerMessage(m) {
       break;
     case "error":
       showToast(m.message || "Terjadi kesalahan koneksi.", "error");
-      if (m.code === "bad_pin") setTimeout(() => location.reload(), 1500);
+      if (m.code === "session_replaced") {
+        clearTimeout(netReconnectTimer);
+        state.isLoggedIn = false;
+        alert("Sesi Anda telah dibuka di perangkat / tab lain. Sesi pada tab ini dinonaktifkan.");
+      } else if (m.code === "unauthorized") {
+        clearTimeout(netReconnectTimer);
+        setTimeout(() => location.reload(), 1500);
+      }
       break;
   }
 }

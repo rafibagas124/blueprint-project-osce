@@ -44,16 +44,27 @@ const AssessorAssignmentSchema = z.object({
   stationNo: z.number().int().min(1).max(10).optional().nullable()
 }).strict();
 
+// --------------------------------------------------- Login Schemas ---
+const StudentLoginSchema = z.object({
+  nim: z.string().min(1).max(30).trim(),
+  token: z.string().min(1).max(256).trim()
+}).strict();
+
+const AssessorLoginSchema = z.object({
+  username: z.string().min(1).max(50).trim(),
+  password: z.string().min(1).max(256)
+}).strict();
+
 // --------------------------------------------------- WebSocket Messages ---
 const WsJoinMessageSchema = z.object({
   type: z.literal("join"),
   clientId: z.string().min(1).max(64),
-  name: z.string().min(1).max(100),
-  nim: z.string().min(1).max(30),
-  gender: GenderSchema.default("L"),
-  role: z.enum(["student", "assessor"]).default("student"),
+  token: z.string().min(1).max(1024), // JWT wajib ada
+  name: z.string().max(100).optional(),
+  nim: z.string().max(30).optional(),
+  gender: GenderSchema.optional(),
+  role: z.enum(["student", "assessor", "coordinator"]).optional(),
   pin: z.string().max(64).optional(),
-  token: z.string().max(512).optional(),
   corridorCode: z.string().max(24).optional(),
   wing: z.union([z.literal(0), z.literal(1)]).optional(),
   room: z.union([z.string(), z.number()]).optional()
@@ -145,6 +156,8 @@ module.exports = {
   GenderSchema,
   CorridorCodeSchema,
   StudentRosterSchema,
+  StudentLoginSchema,
+  AssessorLoginSchema,
   SubmissionSchema,
   AssessorAssignmentSchema,
   WsJoinMessageSchema,
@@ -156,3 +169,4 @@ module.exports = {
   WsGetScoresMessageSchema,
   parseWsMessage
 };
+

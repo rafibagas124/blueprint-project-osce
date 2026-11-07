@@ -10,3 +10,4 @@ const testDir = path.join(os.tmpdir(), "osce_file_store_test_" + Date.now());
 runStoreContractTests("FileStore", async () => {
   return new FileStore({ baseDir: testDir });
 });
+

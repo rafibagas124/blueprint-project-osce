@@ -499,8 +499,8 @@ function renderAssessorScoreTable() {
 }
 
 function downloadAllScoresCsv() {
-  if (netMode === "ws") {
-    window.open(`/api/scores.csv?pin=${encodeURIComponent(state.assessorPin)}`, "_blank");
+  if (netMode === "ws" && state.jwtToken) {
+    window.open(`/api/scores.csv?token=${encodeURIComponent(state.jwtToken)}`, "_blank");
   } else {
     OSCE_SCORING.exportScoreToCSV();
   }

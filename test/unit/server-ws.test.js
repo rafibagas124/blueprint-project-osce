@@ -1,7 +1,7 @@
 const { describe, it, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 const { WebSocket } = require("ws");
-const { server, wss, store } = require("../../server");
+const { server, wss, store, signJwt } = require("../../server");
 
 describe("Integration Test: Express & ws Server", () => {
   let testPort;
@@ -37,6 +37,15 @@ describe("Integration Test: Express & ws Server", () => {
 
   it("2. WebSocket menghubungkan client via library ws dan menerima respon joined", async () => {
     const ws = new WebSocket(wsUrl);
+    const validToken = signJwt({
+      sub: "2024-08099",
+      name: "apt. Dewi Sartika",
+      gender: "P",
+      role: "student",
+      corridor: "KOR-A",
+      group: "GRP-01",
+      seat: 1
+    });
 
     const received = await new Promise((resolve, reject) => {
       ws.on("open", () => {
@@ -44,12 +53,7 @@ describe("Integration Test: Express & ws Server", () => {
           JSON.stringify({
             type: "join",
             clientId: "test_ws_client_1",
-            name: "apt. Dewi Sartika",
-            nim: "2024-08099",
-            gender: "P",
-            role: "student",
-            corridorCode: "KOR-A",
-            wing: 0
+            token: validToken
           })
         );
       });

@@ -79,6 +79,7 @@ describe("Unit Test: Zod Message Contracts", () => {
     const joinMsg = JSON.stringify({
       type: "join",
       clientId: "client_123",
+      token: "mock-jwt-token",
       name: "Budi",
       nim: "2024-08001",
       gender: "L",
@@ -116,3 +117,4 @@ describe("Unit Test: Zod Message Contracts", () => {
     });
   });
 });
+

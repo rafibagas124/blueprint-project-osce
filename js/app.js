@@ -214,57 +214,108 @@ function initThreeJS() {
 }
 
 // =========================================================================
-// LOGIN & SETUP AVATAR SESUAI GENDER & IDENTITAS MAHASISWA
+// LOGIN & SETUP AVATAR SESUAI GENDER & IDENTITAS RESMI DARI SERVER
+// Mahasiswa: NIM + Token -> Data Nama, Gender, Koridor diambil dari Server Store
+// Asesor: Username + Password -> Autentikasi JWT
 // =========================================================================
-function handleLoginSubmit() {
-  const nameInput = document.getElementById("login-input-name").value.trim();
-  const nimInput = document.getElementById("login-input-nim").value.trim();
-  const genderInput = document.getElementById("login-select-gender").value;
+async function handleLoginSubmit() {
   const roleInput = document.getElementById("login-select-role").value;
 
-  if (!nameInput || !nimInput) {
-    showToast(typeof OSCE_I18N !== "undefined" ? OSCE_I18N.t("toast_login_required") : "Harap masukkan Nama Lengkap dan NIM!", "warning");
-    return;
-  }
-
-  state.userProfile.name = nameInput;
-  state.userProfile.nim = nimInput;
-  state.userProfile.gender = genderInput;
-  state.userProfile.role = roleInput;
-
-  const pinEl = document.getElementById("login-input-pin");
-  state.assessorPin = pinEl ? pinEl.value.trim() : "";
-  if (roleInput === "assessor" && location.protocol.startsWith("http") && !state.assessorPin) {
-    showToast(typeof OSCE_I18N !== "undefined" ? OSCE_I18N.t("toast_pin_required") : "Masukkan PIN Asesor!", "warning");
-    return;
-  }
-
-  // Validasi Kode Koridor yang diwajibkan untuk Mahasiswa
   if (roleInput === "student") {
-    const corridorInputEl = document.getElementById("login-input-corridor");
-    const corridorVal = corridorInputEl ? corridorInputEl.value.trim() : "";
-    if (!corridorVal) {
-      showToast("Harap masukkan Kode Koridor Ujian (contoh: KOR-A atau KOR-B) yang diberikan oleh Dosen!", "warning");
-      if (corridorInputEl) corridorInputEl.focus();
+    const nimInput = document.getElementById("login-input-nim").value.trim();
+    const tokenInput = document.getElementById("login-input-token").value.trim();
+
+    if (!nimInput || !tokenInput) {
+      showToast("Harap masukkan NIM dan Token Ujian!", "warning");
       return;
     }
-    const detected = detectWingFromCode(corridorVal);
-    if (detected === -1) {
-      showToast("Kode Koridor '" + corridorVal + "' tidak valid! Gunakan kode untuk Koridor A (cth: KOR-A) atau Koridor B (cth: KOR-B).", "error");
-      if (corridorInputEl) corridorInputEl.focus();
+
+    try {
+      const res = await fetch("/api/auth/login-student", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nim: nimInput, token: tokenInput })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast(data.error || "NIM atau token ujian tidak valid.", "error");
+        return;
+      }
+
+      state.jwtToken = data.token;
+      try { sessionStorage.setItem("osce_jwt", data.token); } catch (e) {}
+
+      // Ambil identitas otoritatif dari server
+      const st = data.student;
+      state.userProfile.name = st.nama;
+      state.userProfile.nim = st.nim;
+      state.userProfile.gender = (st.gender === "P" || st.gender === "female") ? "female" : "male";
+      state.userProfile.role = "student";
+      state.userProfile.seat = st.seat;
+      state.userProfile.group = st.group;
+      state.corridorCode = st.corridor;
+      state.wing = st.corridor === "KOR-B" ? 1 : 0;
+
+      // Tampilkan hasil verifikasi identitas (hanya-baca) pada kartu HUD
+      const card = document.getElementById("hud-student-card");
+      if (card) {
+        card.classList.remove("hidden");
+        const elName = document.getElementById("hud-student-name");
+        const elNim = document.getElementById("hud-student-nim");
+        const elCorridor = document.getElementById("hud-student-corridor");
+        const elGender = document.getElementById("hud-student-gender-badge");
+        if (elName) elName.textContent = st.nama;
+        if (elNim) elNim.textContent = st.nim;
+        if (elCorridor) elCorridor.textContent = `${st.corridor} (Seat ${st.seat})`;
+        if (elGender) elGender.textContent = st.gender === "P" ? "Perempuan" : "Laki-laki";
+      }
+
+      showToast(`Login berhasil. Selamat datang, ${st.nama} (${st.corridor})!`, "success");
+    } catch (err) {
+      showToast("Gagal terhubung ke server autentikasi: " + err.message, "error");
       return;
     }
-    state.wing = detected;
-    state.corridorCode = corridorVal.toUpperCase();
-    if (typeof syncActiveStations === "function") syncActiveStations(state.wing);
-    showToast("Terverifikasi: Anda ditempatkan di " + (detected === 0 ? "KORIDOR A" : "KORIDOR B") + " (Wilayah Terproteksi)", "success");
   } else {
-    state.wing = 0;
-    state.corridorCode = "DOSEN-ALL";
-    if (typeof syncActiveStations === "function") syncActiveStations(state.wing);
+    // Role: Assessor
+    const userInput = document.getElementById("login-input-assessor-user").value.trim();
+    const passInput = document.getElementById("login-input-assessor-pass").value;
+
+    if (!userInput || !passInput) {
+      showToast("Harap masukkan Username dan Password Asesor!", "warning");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/auth/login-assessor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: userInput, password: passInput })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast(data.error || "Username atau password asesor salah.", "error");
+        return;
+      }
+
+      state.jwtToken = data.token;
+      try { sessionStorage.setItem("osce_jwt", data.token); } catch (e) {}
+
+      state.userProfile.name = data.user.nama;
+      state.userProfile.nim = data.user.username;
+      state.userProfile.gender = "male";
+      state.userProfile.role = data.user.role || "assessor";
+      state.corridorCode = "DOSEN-ALL";
+      state.wing = 0;
+
+      showToast(`Selamat datang, ${data.user.nama}! Panel Asesor aktif.`, "success");
+    } catch (err) {
+      showToast("Gagal terhubung ke server autentikasi: " + err.message, "error");
+      return;
+    }
   }
 
   state.isLoggedIn = true;
+  if (typeof syncActiveStations === "function") syncActiveStations(state.wing);
   if (typeof randomizeStationOptionsForCandidate === "function") {
     randomizeStationOptionsForCandidate(state.userProfile.nim);
   }

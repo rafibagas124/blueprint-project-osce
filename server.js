@@ -8,12 +8,18 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 const express = require("express");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const { WebSocketServer, WebSocket } = require("ws");
 
-const { parseWsMessage } = require("./src/schemas/messages");
+const {
+  parseWsMessage,
+  StudentLoginSchema,
+  AssessorLoginSchema
+} = require("./src/schemas/messages");
 const { getStore } = require("./src/store");
 
 // ------------------------------------------------------------- Env Loader ---
@@ -40,8 +46,15 @@ loadDotEnv();
 
 const PORT = parseInt(process.env.PORT || "8080", 10);
 const ROOM_CAPACITY = parseInt(process.env.ROOM_CAPACITY || "20", 10);
-const ASSESSOR_PIN = process.env.OSCE_ASSESSOR_PIN || "2026";
-const JWT_SECRET = process.env.JWT_SECRET || "osce-ukmppai-dev-secret-key-2026";
+
+// Aturan wajib: di production, server menolak start jika JWT_SECRET < 32 karakter
+if (process.env.NODE_ENV === "production") {
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+    throw new Error("FATAL: JWT_SECRET wajib minimal 32 karakter di production.");
+  }
+}
+const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString("hex");
+
 const AI_PROVIDER = (process.env.AI_PROVIDER || "gemini").toLowerCase();
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
@@ -52,15 +65,16 @@ const FLUSH_MS = 100; // 10 Hz Server-Authoritative Position Sync
 const store = getStore();
 
 // --------------------------------------------------------- JWT Helper ---
-function signJwt(payload) {
-  const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
-  const body = Buffer.from(JSON.stringify({ ...payload, iat: Math.floor(Date.now() / 1000) })).toString("base64url");
-  const sig = crypto.createHmac("sha256", JWT_SECRET).update(`${header}.${body}`).digest("base64url");
-  return `${header}.${body}.${sig}`;
+function signJwt(payload, expiresIn = "8h") {
+  return jwt.sign(payload, JWT_SECRET, { expiresIn });
 }
 
-function isValidAssessorPin(pin) {
-  return pin === ASSESSOR_PIN || pin === "2026" || pin === "osce2026";
+function verifyJwt(token) {
+  try {
+    return jwt.verify(token, JWT_SECRET);
+  } catch (err) {
+    return null;
+  }
 }
 
 // --------------------------------------------------------------- State ---
@@ -118,41 +132,58 @@ async function handleWsMessage(client, rawText) {
 
   if (m.type === "join") {
     if (client.joined) return;
-    const role = m.role === "assessor" ? "assessor" : "student";
-    if (role === "assessor" && !isValidAssessorPin(m.pin)) {
-      send(client, { type: "error", code: "bad_pin", message: "PIN Asesor salah." });
+
+    // Validasi token JWT autentikasi
+    if (!m.token) {
+      send(client, { type: "error", code: "unauthorized", message: "Token autentikasi tidak ditemukan. Harap login terlebih dahulu." });
+      client.ws.terminate();
       return;
     }
+
+    const claims = verifyJwt(m.token);
+    if (!claims) {
+      send(client, { type: "error", code: "unauthorized", message: "Token autentikasi tidak valid atau sudah kadaluarsa." });
+      client.ws.terminate();
+      return;
+    }
+
+    const role = (claims.role === "assessor" || claims.role === "coordinator") ? "assessor" : "student";
     client.id = String(m.clientId || crypto.randomUUID()).slice(0, 40);
-    client.name = String(m.name || "Peserta").slice(0, 60);
-    client.nim = String(m.nim || "-").slice(0, 30);
-    client.gender = (m.gender === "female" || m.gender === "P") ? "female" : "male";
+    client.name = String(claims.name || claims.sub).slice(0, 60);
+    client.nim = String(claims.sub).slice(0, 30);
+    client.gender = (claims.gender === "female" || claims.gender === "P") ? "female" : "male";
     client.role = role;
+    client.seat = claims.seat || 1;
+    client.group = claims.group || "GRP-01";
+
+    // Koridor ditentukan otoriter oleh server dari data roster (claims.corridor), bukan input klien
+    if (role === "student") {
+      client.corridorCode = claims.corridor || "KOR-A";
+      client.wing = client.corridorCode === "KOR-B" ? 1 : 0;
+    } else {
+      client.corridorCode = "DOSEN-ALL";
+      client.wing = 0;
+    }
+
     client.roomId = assignRoom(role, m.room);
     client.joined = true;
 
-    // Putuskan koneksi lama jika ada duplicate ID/NIM
-    const old = clients.get(client.id);
-    if (old && old !== client) old.ws.terminate();
+    // Satu NIM satu sesi aktif: login baru memutus sesi lama hanya jika token valid
     if (role === "student") {
       clients.forEach((c) => {
-        if (c !== client && c.role === "student" && c.nim === client.nim) c.ws.terminate();
+        if (c !== client && c.role === "student" && c.nim === client.nim) {
+          send(c, { type: "error", code: "session_replaced", message: "Sesi Anda dipindahkan ke jendela atau perangkat baru." });
+          c.ws.terminate();
+        }
       });
     }
+
+    const old = clients.get(client.id);
+    if (old && old !== client) old.ws.terminate();
     clients.set(client.id, client);
 
     const room = getRoom(client.roomId);
-    if (m.wing !== undefined && (m.wing === 0 || m.wing === 1)) {
-      client.wing = Number(m.wing);
-    } else {
-      let inWingA = 0;
-      room.clients.forEach((c) => { if (c.role !== "assessor" && c.wing === 0) inWingA++; });
-      client.wing = (role === "assessor") ? 0 : (inWingA < Math.max(1, Math.floor(ROOM_CAPACITY / 2)) ? 0 : 1);
-    }
-    client.corridorCode = String(m.corridorCode || (client.wing === 1 ? "KOR-B" : "KOR-A"));
     room.clients.add(client);
-
-    const jwtToken = signJwt({ sub: client.nim, name: client.name, role: client.role, room: client.roomId });
 
     // Cek riwayat nilai dari Store untuk sesi resume
     let resumedStations = null;
@@ -175,9 +206,11 @@ async function handleWsMessage(client, rawText) {
       type: "joined",
       room: client.roomId,
       wing: client.wing,
+      corridorCode: client.corridorCode,
+      seat: client.seat,
       capacity: ROOM_CAPACITY,
       clientId: client.id,
-      jwtToken,
+      jwtToken: m.token,
       resumedStations
     });
     broadcastRoomInfo(room);
@@ -374,11 +407,151 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-// Endpoint CSV Nilai Resmi Asesor
+// ---------------------------------------------------- Auth & Rate Limits ---
+const loginLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Terlalu banyak percobaan login dari IP ini. Coba lagi dalam 5 menit." }
+});
+
+const nimFailedAttempts = new Map(); // identifier -> { count, lockedUntil }
+
+function isIdentifierLocked(id) {
+  const record = nimFailedAttempts.get(id);
+  if (!record) return false;
+  if (record.lockedUntil && Date.now() < record.lockedUntil) return true;
+  if (record.lockedUntil && Date.now() >= record.lockedUntil) {
+    nimFailedAttempts.delete(id);
+    return false;
+  }
+  return false;
+}
+
+function recordLoginFailure(id) {
+  const record = nimFailedAttempts.get(id) || { count: 0, lockedUntil: 0 };
+  record.count += 1;
+  if (record.count >= 5) {
+    record.lockedUntil = Date.now() + 5 * 60 * 1000;
+  }
+  nimFailedAttempts.set(id, record);
+}
+
+function clearLoginFailure(id) {
+  nimFailedAttempts.delete(id);
+}
+
+// Endpoint Login Mahasiswa (NIM + Token Sesi)
+app.post("/api/auth/login-student", loginLimiter, async (req, res) => {
+  let body;
+  try {
+    body = StudentLoginSchema.parse(req.body);
+  } catch (err) {
+    return res.status(400).json({ error: "Format request login tidak valid.", details: err.errors });
+  }
+
+  const nim = body.nim.trim();
+  const token = body.token.trim();
+
+  // Rate-limit per NIM untuk mencegah brute-force tebak token
+  if (isIdentifierLocked(nim)) {
+    return res.status(429).json({ error: "Terlalu banyak percobaan login gagal untuk NIM ini. Coba lagi dalam 5 menit." });
+  }
+
+  const student = await store.findStudentByNim(nim);
+  if (!student || !student.tokenHash || !bcrypt.compareSync(token, student.tokenHash)) {
+    recordLoginFailure(nim);
+    // Aturan wajib: Pesan gagal tidak boleh membedakan 'NIM tidak ada' dan 'token salah'
+    return res.status(401).json({ error: "NIM atau token ujian tidak valid." });
+  }
+
+  clearLoginFailure(nim);
+
+  // Sign JWT dengan claims otoriter dari data store
+  const payload = {
+    sub: student.nim,
+    name: student.nama,
+    gender: student.gender,
+    corridor: student.corridor,
+    group: student.group || "GRP-01",
+    seat: student.seat || 1,
+    role: "student"
+  };
+
+  const jwtToken = signJwt(payload);
+
+  return res.json({
+    ok: true,
+    token: jwtToken,
+    student: {
+      nim: student.nim,
+      nama: student.nama,
+      gender: student.gender,
+      corridor: student.corridor,
+      group: student.group || "GRP-01",
+      seat: student.seat || 1
+    }
+  });
+});
+
+// Endpoint Login Asesor / Koordinator (Username + Password)
+app.post("/api/auth/login-assessor", loginLimiter, async (req, res) => {
+  let body;
+  try {
+    body = AssessorLoginSchema.parse(req.body);
+  } catch (err) {
+    return res.status(400).json({ error: "Format request login asesor tidak valid." });
+  }
+
+  const username = body.username.trim().toLowerCase();
+  const password = body.password;
+
+  if (isIdentifierLocked(username)) {
+    return res.status(429).json({ error: "Terlalu banyak percobaan login gagal untuk akun ini. Coba lagi dalam 5 menit." });
+  }
+
+  const assessor = await store.findAssessorByUsername(username);
+  if (!assessor || !assessor.passwordHash || !bcrypt.compareSync(password, assessor.passwordHash)) {
+    recordLoginFailure(username);
+    return res.status(401).json({ error: "Username atau password asesor tidak valid." });
+  }
+
+  clearLoginFailure(username);
+
+  const payload = {
+    sub: assessor.username,
+    name: assessor.nama,
+    role: assessor.role || "assessor"
+  };
+
+  const jwtToken = signJwt(payload);
+
+  return res.json({
+    ok: true,
+    token: jwtToken,
+    user: {
+      username: assessor.username,
+      nama: assessor.nama,
+      role: assessor.role || "assessor"
+    }
+  });
+});
+
+// Endpoint CSV Nilai Resmi Asesor (Dilindungi JWT Asesor/Koordinator)
 app.get("/api/scores.csv", async (req, res) => {
-  const pin = req.query.pin;
-  if (!isValidAssessorPin(pin)) {
-    return res.status(401).send("PIN asesor diperlukan.");
+  const authHeader = req.headers.authorization;
+  const token = (authHeader && authHeader.startsWith("Bearer "))
+    ? authHeader.slice(7)
+    : req.query.token;
+
+  if (!token) {
+    return res.status(401).send("Token autentikasi asesor diperlukan.");
+  }
+
+  const claims = verifyJwt(token);
+  if (!claims || (claims.role !== "assessor" && claims.role !== "coordinator")) {
+    return res.status(403).send("Akses ditolak: Hanya untuk Asesor dan Koordinator.");
   }
 
   try {
@@ -480,9 +653,19 @@ if (require.main === module) {
     console.log(` OSCE Center 3D Server (ws library) -> http://localhost:${PORT}/blueprint.html`);
     console.log(` Kapasitas room: ${ROOM_CAPACITY} peserta • Sync: ${1000 / FLUSH_MS} Hz`);
     console.log(` Driver Store: ${process.env.STORE_DRIVER || "file"}`);
-    console.log(` PIN asesor: ${ASSESSOR_PIN}`);
+    console.log(` Mode Autentikasi: JWT Sesi Mahasiswa + Bcrypt Login Asesor`);
     console.log("=======================================================");
   });
 }
 
-module.exports = { app, server, wss, store };
+module.exports = {
+  app,
+  server,
+  wss,
+  store,
+  signJwt,
+  verifyJwt,
+  nimFailedAttempts,
+  clearLoginFailure,
+  clients
+};

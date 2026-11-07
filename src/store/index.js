@@ -7,7 +7,9 @@ const {
   BaseStore,
   DuplicateSubmissionError,
   StationRestError,
-  CorridorCapacityError
+  CorridorCapacityError,
+  SeatConflictError,
+  RosterValidationError
 } = require("./store-interface");
 
 let activeStoreInstance = null;
@@ -45,5 +47,8 @@ module.exports = {
   MemoryStore,
   DuplicateSubmissionError,
   StationRestError,
-  CorridorCapacityError
+  CorridorCapacityError,
+  SeatConflictError,
+  RosterValidationError
 };
+

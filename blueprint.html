@@ -97,6 +97,17 @@
             <span>→</span>
           </button>
         </div>
+        <!-- INFORMASI RESMI PESERTA (HANYA BACA SETELAH LOGIN) -->
+        <div id="hud-student-card" class="mt-2.5 pt-2 border-t border-slate-200/80 text-[11px] text-slate-700 hidden">
+          <div class="flex items-center justify-between font-bold text-teal-900">
+            <span id="hud-student-name" class="truncate">-</span>
+            <span id="hud-student-gender-badge" class="px-1.5 py-0.5 rounded bg-teal-100 text-[10px] text-teal-800 font-extrabold">-</span>
+          </div>
+          <div class="flex items-center justify-between text-slate-500 text-[10px] mt-0.5">
+            <span>NIM: <strong id="hud-student-nim" class="font-mono text-slate-700">-</strong></span>
+            <span>Wilayah: <strong id="hud-student-corridor" class="text-teal-700">-</strong></span>
+          </div>
+        </div>
       </div>
 
       <!-- TOP-CENTER: Controls Hint & Concurrency Telemetry -->
@@ -275,8 +286,9 @@
   </div>
 
   <!-- =======================================================================
-       MODAL 1: FORM LOGIN / GERBANG MASUK PESERTA & ASESOR
-       (Nama - NIM - Pilihan Jenis Kelamin L/P - Peran)
+       MODAL 1: FORM LOGIN / GERBANG MASUK RESMI PESERTA & ASESOR
+       Mahasiswa = NIM + Token (Nama, Gender, Koridor dari Server Store)
+       Asesor = Username + Password
        ======================================================================= -->
   <div id="modal-login" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 animate-fadeIn relative">
@@ -288,65 +300,55 @@
           🩺
         </div>
         <h2 class="text-2xl font-black text-slate-900 tracking-tight">Gerbang Masuk OSCE Center 3D</h2>
-        <p class="text-xs text-slate-500 mt-1">Simulasi Ujian Kompetensi Apoteker & Dokter (UKMPPAI) Berbasis Web</p>
+        <p class="text-xs text-slate-500 mt-1">Ujian Kompetensi Apoteker UKMPPAI Berbasis Web 3D</p>
       </div>
 
       <div class="space-y-4">
-        <!-- Nama Mahasiswa -->
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">Nama Lengkap Mahasiswa / Dosen:</label>
-          <input type="text" id="login-input-name" placeholder="Masukkan nama lengkap beserta gelar..."
-            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-medium focus:ring-2 focus:ring-teal-500 focus:outline-none" />
-        </div>
-
-        <!-- NIM -->
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">Nomor Induk Mahasiswa (NIM) / NIDN:</label>
-          <input type="text" id="login-input-nim" placeholder="Contoh: 2024-08192"
-            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-mono font-medium focus:ring-2 focus:ring-teal-500 focus:outline-none" />
-        </div>
-
-        <!-- Jenis Kelamin & Model Karakter -->
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">Pilih Jenis Kelamin & Karakter 3D:</label>
-          <select id="login-select-gender" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-none bg-slate-50">
-            <option value="female">👩‍⚕️ Perempuan (Mahasiswi Berhijab Rapi & Jas Snelli)</option>
-            <option value="male">👨‍⚕️ Laki-laki (Mahasiswa Berambut Rapi & Jas Snelli)</option>
-          </select>
-        </div>
-
-        <!-- Peran (Mahasiswa / Dosen Asesor) -->
+        <!-- Pilihan Peran Pengguna -->
         <div>
           <label class="block text-xs font-bold text-slate-700 mb-1">Pilih Peran Pengguna:</label>
           <select id="login-select-role" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-teal-500 focus:outline-none bg-slate-50">
             <option value="student">🎓 Mahasiswa / Peserta Ujian OSCE</option>
-            <option value="assessor">👨‍🏫 Dosen / Asesor Penguji (Fitur Input Petunjuk & Rubrik)</option>
+            <option value="assessor">👨‍🏫 Dosen / Asesor Penguji</option>
           </select>
         </div>
 
-        <!-- PIN Asesor (hanya muncul jika peran = Dosen / Asesor) -->
-        <div id="login-pin-wrap" class="hidden">
-          <label class="block text-xs font-bold text-slate-700 mb-1">PIN Asesor (diberikan panitia ujian):</label>
-          <input type="password" id="login-input-pin" placeholder="Masukkan PIN asesor" autocomplete="off"
-            class="w-full px-3.5 py-2.5 rounded-xl border border-amber-400 text-xs font-mono font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none" />
-        </div>
+        <!-- FORM LOGIN MAHASISWA (NIM + TOKEN UJIAN) -->
+        <div id="login-student-section" class="space-y-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Nomor Induk Mahasiswa (NIM):</label>
+            <input type="text" id="login-input-nim" placeholder="Contoh: DEV-001 atau 2024-08192" autocomplete="username"
+              class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-mono font-medium focus:ring-2 focus:ring-teal-500 focus:outline-none" />
+          </div>
 
-        <!-- KODE KORIDOR (hanya muncul jika peran = Mahasiswa) -->
-        <div id="login-corridor-wrap">
-          <label class="block text-xs font-bold text-slate-700 mb-1">
-            🏫 Kode Koridor Ujian <span class="text-rose-600">*</span>
-            <span class="text-[10px] font-normal text-slate-500 ml-1">(diberikan oleh Dosen/Panitia saat daftar ujian)</span>
-          </label>
-          <input type="text" id="login-input-corridor" placeholder="Contoh: KOR-A-2026 atau KOR-B-2026"
-            autocomplete="off" maxlength="24"
-            class="w-full px-3.5 py-2.5 rounded-xl border border-indigo-400 text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-indigo-50 uppercase tracking-wider" />
-          <div class="text-[10px] text-indigo-700 mt-1">
-            💡 Kode ini menentukan koridor Anda (A atau B). Mahasiswa Koridor A <strong>tidak dapat masuk</strong> ke wilayah Koridor B, dan sebaliknya.
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Token Ujian Mahasiswa:</label>
+            <input type="password" id="login-input-token" placeholder="Masukkan token ujian yang diberikan panitia..." autocomplete="current-password"
+              class="w-full px-3.5 py-2.5 rounded-xl border border-teal-400 text-xs font-mono font-bold focus:ring-2 focus:ring-teal-500 focus:outline-none bg-teal-50/40" />
+          </div>
+
+          <div class="bg-teal-50 border border-teal-200 rounded-xl p-3 text-[11px] text-teal-900 leading-relaxed">
+            ✨ <strong>Otoritas Roster Server:</strong> Nama, Jenis Kelamin (L/P), Koridor (A/B), dan Nomor Kursi ditentukan langsung oleh data server setelah token diverifikasi.
           </div>
         </div>
 
-        <div class="bg-teal-50 border border-teal-200 rounded-xl p-3 text-[11px] text-teal-900 leading-relaxed">
-          ✨ <strong>Kartu Tanda Pengenal Otomatis:</strong> Data Nama, NIM, dan Jenis Kelamin yang Anda masukkan akan langsung tertempel pada kartu identitas di baju seragam sebelah kanan avatar 3D Anda!
+        <!-- FORM LOGIN DOSEN / ASESOR (USERNAME + PASSWORD) -->
+        <div id="login-assessor-section" class="hidden space-y-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Username Asesor / NIDN:</label>
+            <input type="text" id="login-input-assessor-user" placeholder="Contoh: asesor1 atau koordinator" autocomplete="username"
+              class="w-full px-3.5 py-2.5 rounded-xl border border-amber-300 text-xs font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Password Akun Asesor:</label>
+            <input type="password" id="login-input-assessor-pass" placeholder="Masukkan password akun asesor..." autocomplete="current-password"
+              class="w-full px-3.5 py-2.5 rounded-xl border border-amber-300 text-xs font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none" />
+          </div>
+
+          <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-[11px] text-amber-900 leading-relaxed">
+            👨‍🏫 <strong>Akses Dosen / Penguji:</strong> Login untuk memantau live scoring mahasiswa, menginput petunjuk stasiun, dan memberikan penilaian overrides.
+          </div>
         </div>
 
         <button id="btn-login-submit" type="button" class="w-full py-3 bg-teal-700 hover:bg-teal-600 text-white rounded-xl font-extrabold text-sm shadow-xl transition transform active:scale-98">

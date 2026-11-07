@@ -8,7 +8,8 @@ const assert = require("node:assert/strict");
 const {
   DuplicateSubmissionError,
   StationRestError,
-  CorridorCapacityError
+  CorridorCapacityError,
+  SeatConflictError
 } = require("../../src/store/store-interface");
 
 function runStoreContractTests(storeName, createStoreFn) {
@@ -293,7 +294,92 @@ function runStoreContractTests(storeName, createStoreFn) {
       const all = await store.listSubmissions({ examGroupId: "GRP-SURGE", nim: "NIM-SURGE-1" });
       assert.equal(all.length, 9);
     });
+
+    it("11. Menyimpan dan menemukan akun asesor (username, passwordHash, nama, role)", async () => {
+      await store.saveAssessor({
+        username: "asesor_dr_budi",
+        passwordHash: "$2a$10$hashedstringexample",
+        nama: "dr. Budi, Sp.FRS",
+        role: "assessor"
+      });
+
+      const found = await store.findAssessorByUsername("asesor_dr_budi");
+      assert.ok(found);
+      assert.equal(found.username, "asesor_dr_budi");
+      assert.equal(found.nama, "dr. Budi, Sp.FRS");
+      assert.equal(found.role, "assessor");
+
+      // Case-insensitive lookup check
+      const foundUpper = await store.findAssessorByUsername("ASESOR_DR_BUDI");
+      assert.ok(foundUpper);
+      assert.equal(foundUpper.username, "asesor_dr_budi");
+    });
+
+    it("12. Menolak mahasiswa ke-11 pada koridor yang sama dalam satu grup saat registrasi roster", async () => {
+      const group = "GRP-ROSTER-LIMIT";
+      const corridor = "KOR-A";
+
+      for (let s = 1; s <= 10; s++) {
+        await store.saveStudent({
+          nim: `ROSTER-${s}`,
+          nama: `Mhs ${s}`,
+          gender: s % 2 === 0 ? "P" : "L",
+          corridor,
+          group,
+          seat: s
+        });
+      }
+
+      await assert.rejects(
+        async () => {
+          await store.saveStudent({
+            nim: "ROSTER-11",
+            nama: "Mhs 11",
+            gender: "L",
+            corridor,
+            group,
+            seat: 1 // seat sudah penuh atau mahasiswa ke-11
+          });
+        },
+        (err) => {
+          assert.ok(err instanceof CorridorCapacityError || err instanceof SeatConflictError);
+          return true;
+        }
+      );
+    });
+
+    it("13. Menolak nomor kursi (seat) ganda pada grup dan koridor yang sama", async () => {
+      const group = "GRP-SEAT-TEST";
+      const corridor = "KOR-B";
+
+      await store.saveStudent({
+        nim: "NIM-SEAT-1",
+        nama: "Mhs Seat 1",
+        gender: "L",
+        corridor,
+        group,
+        seat: 3
+      });
+
+      await assert.rejects(
+        async () => {
+          await store.saveStudent({
+            nim: "NIM-SEAT-2",
+            nama: "Mhs Seat 2",
+            gender: "P",
+            corridor,
+            group,
+            seat: 3 // Seat 3 ganda
+          });
+        },
+        (err) => {
+          assert.ok(err instanceof SeatConflictError);
+          return true;
+        }
+      );
+    });
   });
 }
 
 module.exports = { runStoreContractTests };
+

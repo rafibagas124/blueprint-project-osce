@@ -5,3 +5,4 @@ const { runStoreContractTests } = require("../contract/store.contract");
 runStoreContractTests("MemoryStore", async () => {
   return new MemoryStore();
 });
+

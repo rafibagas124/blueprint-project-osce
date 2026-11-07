@@ -171,12 +171,13 @@ function wireEvents() {
   holdKey("btn-turn-left", "a");
   holdKey("btn-turn-right", "d");
 
-  // Koridor A / B, nilai ujian, rekap asesor
+  // Form Login: toggle role Mahasiswa (NIM + Token) vs Asesor (Username + Password)
   document.getElementById("login-select-role").addEventListener("change", (e) => {
     const isAssessor = (e.target.value === "assessor");
-    document.getElementById("login-pin-wrap").classList.toggle("hidden", !isAssessor);
-    const corrWrap = document.getElementById("login-corridor-wrap");
-    if (corrWrap) corrWrap.classList.toggle("hidden", isAssessor);
+    const studentSec = document.getElementById("login-student-section");
+    const assessorSec = document.getElementById("login-assessor-section");
+    if (studentSec) studentSec.classList.toggle("hidden", isAssessor);
+    if (assessorSec) assessorSec.classList.toggle("hidden", !isAssessor);
   });
   document.getElementById("btn-close-assessor-scores").addEventListener("click", closeAssessorScoresModal);
   document.getElementById("btn-assessor-refresh").addEventListener("click", () => {
