@@ -6,6 +6,12 @@
 // INPUT & EVENT LISTENERS
 // =========================================================================
 function wireEvents() {
+  // Peringatan jika dibuka lewat file://
+  if (typeof window !== "undefined" && window.location && window.location.protocol === "file:") {
+    const fileWarnEl = document.getElementById("file-protocol-warning");
+    if (fileWarnEl) fileWarnEl.classList.remove("hidden");
+  }
+
   // Login Form
   document.getElementById("btn-login-submit").addEventListener("click", handleLoginSubmit);
 
