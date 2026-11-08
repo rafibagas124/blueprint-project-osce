@@ -59,6 +59,11 @@ const StationNoParamSchema = z.object({
   stationNo: z.coerce.number().int()
 });
 
+const SubmitDecisionSchema = z.object({
+  stationNo: z.number().int().min(1).max(9),
+  optionId: z.string().min(1).max(64).trim()
+}).strict();
+
 // --------------------------------------------------- WebSocket Messages ---
 const WsJoinMessageSchema = z.object({
   type: z.literal("join"),
@@ -172,6 +177,7 @@ module.exports = {
   WsUpdateQuizMessageSchema,
   WsGetScoresMessageSchema,
   StationNoParamSchema,
+  SubmitDecisionSchema,
   parseWsMessage
 };
 

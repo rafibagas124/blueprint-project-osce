@@ -19,7 +19,8 @@ const {
   parseWsMessage,
   StudentLoginSchema,
   AssessorLoginSchema,
-  StationNoParamSchema
+  StationNoParamSchema,
+  SubmitDecisionSchema
 } = require("./src/schemas/messages");
 const { getStore } = require("./src/store");
 const {
@@ -247,54 +248,11 @@ async function handleWsMessage(client, rawText) {
   }
 
   if (m.type === "score" || m.type === "submit_decision") {
-    const stationNo = Number(m.stationIdx) + 1; // Konversi 0-indexed ke 1-indexed (1-10)
-    const cleanScore = Math.max(0, Math.min(100, Number(m.score) || 0));
-    const cleanRating = String(m.globalRating || (m.isCorrect ? "PASS" : "BORDERLINE")).slice(0, 24);
-
-    // Stasiun 10 adalah istirahat, tolak submit
-    if (stationNo === 10) {
-      send(client, { type: "error", code: "rest_station", message: "Stasiun 10 adalah stasiun istirahat (tidak dinilai)." });
-      return;
-    }
-
-    try {
-      await store.saveSubmission({
-        examGroupId: String(client.roomId),
-        nim: client.nim,
-        nama: client.name,
-        gender: client.gender === "female" ? "P" : "L",
-        corridorCode: client.wing === 1 ? "KOR-B" : "KOR-A",
-        stationNo,
-        selectedOption: m.selected,
-        isCorrect: Boolean(m.isCorrect),
-        score: cleanScore,
-        finalScore: cleanScore,
-        status: "SUBMITTED"
-      });
-    } catch (err) {
-      // Jika duplicate, biarkan idempotent (jangan crash)
-      if (err.name !== "DuplicateSubmissionError") {
-        console.warn("[Store] Gagal menyimpan submission:", err.message);
-      }
-    }
-
-    // Real-time push hasil penilaian ke seluruh Asesor
-    const liveEventMsg = JSON.stringify({
-      type: "live_score_event",
-      name: client.name,
-      nim: client.nim,
-      room: client.roomId,
-      stationIdx: m.stationIdx,
-      isCorrect: Boolean(m.isCorrect),
-      score: cleanScore,
-      globalRating: cleanRating,
-      timeStr: new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
-    });
-
-    clients.forEach((c) => {
-      if (c.role === "assessor") {
-        send(c, liveEventMsg);
-      }
+    // 3C.2: Jalur lama via WS ditutup — submit wajib melalui POST /api/submit
+    send(client, {
+      type: "error",
+      code: "ws_score_deprecated",
+      message: "Pengiriman nilai via WebSocket sudah ditutup. Gunakan HTTP POST /api/submit."
     });
     return;
   }
@@ -814,6 +772,108 @@ app.get("/api/station/:stationNo", async (req, res) => {
   });
 });
 
+function isStationAllowedNow(student, stationNo) {
+  // TODO Fase 4: validasi rotasi ronde & jam ujian stasiun
+  return true;
+}
+
+const submitRateLimitMap = new Map(); // nim -> { count, resetAt }
+function checkSubmitRateLimit(nim) {
+  const now = Date.now();
+  const rec = submitRateLimitMap.get(nim) || { count: 0, resetAt: now + 60000 };
+  if (now > rec.resetAt) {
+    rec.count = 1;
+    rec.resetAt = now + 60000;
+  } else {
+    rec.count += 1;
+  }
+  submitRateLimitMap.set(nim, rec);
+  return rec.count <= 60; // Max 60 submit per menit
+}
+
+// Endpoint Submit Jawaban Ujian Mahasiswa (POST /api/submit)
+app.post("/api/submit", async (req, res) => {
+  const authHeader = req.headers.authorization;
+  const token = (authHeader && authHeader.startsWith("Bearer ")) ? authHeader.slice(7) : req.query.token;
+  if (!token) {
+    return res.status(401).json({ error: "Token autentikasi diperlukan." });
+  }
+
+  const claims = verifyJwt(token);
+  if (!claims || claims.role !== "student") {
+    return res.status(403).json({ error: "Hanya mahasiswa aktif yang berwenang mengirimkan jawaban ujian." });
+  }
+
+  let body;
+  try {
+    body = SubmitDecisionSchema.parse(req.body);
+  } catch (err) {
+    return res.status(400).json({ error: "Format request submit tidak valid atau mengandung field terlarang.", details: err.errors });
+  }
+
+  const stationNo = body.stationNo;
+  if (stationNo === 10) {
+    return res.status(400).json({ error: "Stasiun 10 adalah stasiun istirahat (tidak dinilai)." });
+  }
+  if (stationNo < 1 || stationNo > 9) {
+    return res.status(400).json({ error: "Nomor stasiun harus berada pada rentang 1-9." });
+  }
+
+  const corridor = claims.corridor;
+  if (corridor !== "KOR-A" && corridor !== "KOR-B") {
+    return res.status(403).json({ error: "Koridor mahasiswa tidak valid." });
+  }
+
+  const originalIndex = resolveOptionId(claims.sub, corridor, stationNo, body.optionId);
+  if (originalIndex === null) {
+    return res.status(400).json({ error: "Option ID tidak valid atau tidak cocok dengan mahasiswa/stasiun ini." });
+  }
+
+  if (!isStationAllowedNow(claims, stationNo)) {
+    return res.status(403).json({ error: "Stasiun belum diizinkan untuk dikerjakan saat ini." });
+  }
+
+  if (!checkSubmitRateLimit(claims.sub)) {
+    return res.status(429).json({ error: "Terlalu banyak permintaan submit. Harap tunggu sebentar." });
+  }
+
+  const key = getAnswerKey(corridor, stationNo);
+  const isCorrect = key ? (originalIndex === key.correctIndex) : false;
+  const score = isCorrect ? 100 : 0;
+
+  const examGroupId = claims.group || "GRP-01";
+  const nim = claims.sub;
+
+  const existing = await store.findSubmission(examGroupId, nim, stationNo);
+  if (existing) {
+    // Idempoten: submit kedua untuk stasiun yang sama TIDAK mengubah data dan TIDAK mengubah skor
+    return res.json({ accepted: true, stationNo });
+  }
+
+  try {
+    await store.saveSubmission({
+      examGroupId,
+      nim,
+      nama: claims.name,
+      gender: (claims.gender === "female" || claims.gender === "P") ? "P" : "L",
+      corridorCode: corridor,
+      stationNo,
+      selectedOption: originalIndex,
+      isCorrect,
+      score,
+      finalScore: score,
+      status: "SUBMITTED"
+    });
+  } catch (err) {
+    if (err.name !== "DuplicateSubmissionError") {
+      console.error("[Submit] Gagal menyimpan submission ke store:", err);
+      return res.status(500).json({ error: "Gagal menyimpan jawaban." });
+    }
+  }
+
+  return res.json({ accepted: true, stationNo });
+});
+
 // Static Web Server dengan ALLOWLIST ketat (bukan daftar blokir)
 const ALLOWED_STATIC_FILES = new Set([
   "blueprint.html",
@@ -906,24 +966,9 @@ if (require.main === module) {
 }
 
 module.exports = {
-  app,
-  server,
-  wss,
-  store,
-  signJwt,
-  verifyJwt,
-  loginLockoutMap,
-  nimFailedAttempts,
-  globalNimLockoutMap,
-  getClientIp,
-  isIdentifierLocked,
-  recordLoginFailure,
-  clearLoginFailure,
-  unlockAccount,
-  getBank,
-  getAnswerKey,
-  generateOptionId,
-  resolveOptionId,
-  checkStationRateLimit,
-  clients
+  app, server, wss, store, signJwt, verifyJwt,
+  loginLockoutMap, nimFailedAttempts, globalNimLockoutMap, getClientIp,
+  isIdentifierLocked, recordLoginFailure, clearLoginFailure, unlockAccount,
+  getBank, getAnswerKey, generateOptionId, resolveOptionId,
+  checkStationRateLimit, isStationAllowedNow, checkSubmitRateLimit, clients
 };
