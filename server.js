@@ -308,15 +308,11 @@ async function handleWsMessage(client, rawText) {
   }
 
   if (m.type === "update_station_quiz") {
-    if (client.role !== "assessor") return;
-    const quizMsg = JSON.stringify({
-      type: "update_station_quiz",
-      stationIdx: Number(m.stationIdx) || 0,
-      wing: Number(m.wing) || 0,
-      updatedData: m.updatedData || {}
-    });
-    clients.forEach((c) => {
-      if (c !== client) send(c, quizMsg);
+    // 3D-2: Perubahan soal via WS ditutup & dilarang — soal dikelola otoritatif oleh server
+    send(client, {
+      type: "error",
+      code: "ws_update_quiz_rejected",
+      message: "Perubahan soal via WebSocket tidak diizinkan. Perubahan soal hanya dapat dilakukan melalui server."
     });
     return;
   }

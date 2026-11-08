@@ -5,7 +5,7 @@
 // API & WebSocket tidak pernah di-cache.
 // =========================================================================
 
-const CACHE_NAME = "osce-center-3d-v4";
+const CACHE_NAME = "osce-center-3d-v5";
 const ASSETS_TO_CACHE = [
   "./blueprint.html",
   "./manifest.json",

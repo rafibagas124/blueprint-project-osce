@@ -35,18 +35,6 @@ function markSimSolved(stationIdx) {
   if (prog) {
     prog.labDone = true;
     prog.simSolved = true;
-    prog.checklistTicks = prog.checklistTicks || {};
-    const st = STATIONS[stationIdx];
-    if (st && st.checklist) {
-      st.checklist.forEach((item) => {
-        if (item.critical) prog.checklistTicks[item.id] = true;
-      });
-    }
-    // Otomatis pilih opsi yang benar jika simulasi berhasil diselesaikan
-    if (st && st.options) {
-      const rightIdx = st.options.findIndex((o) => o.correct);
-      if (rightIdx >= 0) selectedDecision = rightIdx;
-    }
   }
   playBell("chime");
   showToast(`Simulasi interaktif ${STATIONS[stationIdx].code} berhasil diselesaikan dengan tepat!`, "success");

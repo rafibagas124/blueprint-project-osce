@@ -56,7 +56,7 @@ function connectWebSocket() {
     handleServerMessage(m);
   };
 
-  netSocket.onerror = () => {};
+  netSocket.onerror = () => { };
 
   netSocket.onclose = () => {
     const wasWs = netMode === "ws";
@@ -81,7 +81,7 @@ function initBroadcastFallback() {
   multiChannel = new BroadcastChannel("osce_multiplayer_sync");
   multiChannel.onmessage = (e) => handleRemoteMessage(e.data);
   window.addEventListener("beforeunload", () => {
-    try { multiChannel.postMessage({ type: "player_leave", clientId: state.clientId }); } catch (err) {}
+    try { multiChannel.postMessage({ type: "player_leave", clientId: state.clientId }); } catch (err) { }
   });
   updateTelemetry();
 }
@@ -141,7 +141,7 @@ function netSendScore(stationIdx, selected, isCorrect, score, globalRating = "PA
     pushLiveGradingEvent(payload);
   }
   if (multiChannel) {
-    try { multiChannel.postMessage({ type: "live_score_event", ...payload }); } catch (e) {}
+    try { multiChannel.postMessage({ type: "live_score_event", ...payload }); } catch (e) { }
   }
 
   // Jika dalam mode simulasi 10 mahasiswa sekoridor (tanpa 9 tab asli), simulasikan 9 teman sekoridor
@@ -155,7 +155,7 @@ function netSendScore(stationIdx, selected, isCorrect, score, globalRating = "PA
         name: b.data.name,
         nim: b.data.nim,
         stationIdx: b.currentStation,
-        isCorrect: botCorrect,
+        passed: botCorrect,
         score: botScore,
         globalRating: botCorrect ? (botScore >= 90 ? "SUPERIOR" : "PASS") : "BORDERLINE"
       };
@@ -167,7 +167,7 @@ function netSendScore(stationIdx, selected, isCorrect, score, globalRating = "PA
 function netSendStationQuiz(stationIdx, updatedData, wing = 0) {
   netSend({ type: "update_station_quiz", stationIdx, updatedData, wing });
   if (multiChannel) {
-    try { multiChannel.postMessage({ type: "update_station_quiz", stationIdx, updatedData, wing }); } catch (e) {}
+    try { multiChannel.postMessage({ type: "update_station_quiz", stationIdx, updatedData, wing }); } catch (e) { }
   }
 }
 
@@ -367,7 +367,7 @@ function pollOnlineCount() {
   fetch("/api/health").then((r) => r.json()).then((j) => {
     onlineTotal = j.online;
     updateTelemetry();
-  }).catch(() => {});
+  }).catch(() => { });
 }
 
 function updateTelemetry() {

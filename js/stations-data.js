@@ -1,6 +1,8 @@
 // =========================================================================
-// DATA 10 STATION STANDAR UKMPPAI OSCE APOTEKER
-// Dilengkapi Sistem Penyimpanan Petunjuk Kustom Dosen / Asesor
+// DATA 10 STATION STANDAR UKMPPAI OSCE APOTEKER (FASE 3D-2: BERSIH DARI KUNCI)
+// Memuat metadata untuk rendering adegan 3D, NPC interaktif, dan simulasi lab.
+// Soal keputusan, pilihan jawaban, kunci, dan rubrik penilaian telah dipindahkan
+// secara otoritatif ke sisi server (src/data/question-bank.js).
 // =========================================================================
 
 const DEFAULT_STATIONS = [
@@ -26,12 +28,7 @@ const DEFAULT_STATIONS = [
       { q: "Konfirmasi target organoleptik sediaan untuk anak", a: "Target berupa emulsi tipe O/W yang homogen, rasa manis jeruk, tidak tengik, dan viskositas mudah dituang (150–250 cP)." }
     ],
     labData: "Formula: Minyak Ikan 30%, Span 80 & Tween 80 (total emulgator 5%), Gliserin 10%, Sirupus Simplex 20%, BHT 0.02%, Aqua ad 100 ml. Target HLB = 12.0.",
-    decisionQuestion: "Berapa proporsi Tween 80 dan Span 80 yang harus Anda tetapkan untuk mencapai HLB butuh 12.0?",
-    options: [
-      { text: "Tween 80 sebesar 3.60 g dan Span 80 sebesar 1.40 g (Rasio 72% : 28%)", correct: true },
-      { text: "Tween 80 sebesar 1.40 g dan Span 80 sebesar 3.60 g (Rasio 28% : 72%)", correct: false },
-      { text: "Hanya menggunakan Span 80 sebesar 5.0 g tanpa Tween 80", correct: false }
-    ]
+    decisionQuestion: "Berapa proporsi Tween 80 dan Span 80 yang harus Anda tetapkan untuk mencapai HLB butuh 12.0?"
   },
   {
     id: 2,
@@ -55,12 +52,7 @@ const DEFAULT_STATIONS = [
       { q: "Tanyakan kecepatan mesin cetak tablet saat terjadi capping", a: "Mesin rotary dioperasikan pada kecepatan maksimum 55 rpm dengan gaya pra-kompresi belum diaktifkan." }
     ],
     labData: "Data IPC Granul: LOD = 0.4%, Sudut Diam = 38 derajat, Indeks Carr = 23%. Kekerasan tablet = 3.2 kP (Syarat 4–8 kP), Kerapuhan = 1.8% (Syarat < 1%).",
-    decisionQuestion: "Langkah koreksi teknis utama yang harus Anda rekomendasikan sebagai Apoteker Produksi adalah:",
-    options: [
-      { text: "Atur kelembapan granul ke rentang 1.5–2.0%, kurangi kecepatan rotasi punch, dan aktifkan gaya pra-kompresi untuk mengeluarkan udara terjebak", correct: true },
-      { text: "Tingkatkan gaya kompresi utama hingga maksimum tanpa mengubah kelembapan granul", correct: false },
-      { text: "Menambahkan magnesium stearat hingga 5% langsung ke dalam hopper", correct: false }
-    ]
+    decisionQuestion: "Langkah koreksi teknis utama yang harus Anda rekomendasikan sebagai Apoteker Produksi adalah:"
   },
   {
     id: 3,
@@ -84,12 +76,7 @@ const DEFAULT_STATIONS = [
       { q: "Konfirmasi pengenceran sampel", a: "10 tablet ditimbang seksama (bobot rata-rata 650 mg), diserbukkan setara 50 mg zat aktif, dilarutkan dalam labu takar 100 ml, disaring 0.45 um." }
     ],
     labData: "Luas Area Sampel = 845.210 uAU*s. Luas Area Standar Amoksisilin 500 ppm = 824.600 uAU*s. Bobot rata-rata tablet = 650.0 mg. Serbuk yang ditimbang = 65.0 mg.",
-    decisionQuestion: "Berapa kadar Amoksisilin per tablet dan bagaimana keputusan Apoteker QA?",
-    options: [
-      { text: "Kadar = 102.5% (512.5 mg/tab), Memenuhi Syarat Farmakope (90.0–110.0%) → Rilis Bets", correct: true },
-      { text: "Kadar = 88.2% (441.0 mg/tab), Tidak Memenuhi Syarat → Tolak/Reject Bets", correct: false },
-      { text: "Kadar = 118.0% (590.0 mg/tab), Overdosis → Musnahkan Bets", correct: false }
-    ]
+    decisionQuestion: "Berapa kadar Amoksisilin per tablet dan bagaimana keputusan Apoteker QA?"
   },
   {
     id: 4,
@@ -113,12 +100,7 @@ const DEFAULT_STATIONS = [
       { q: "Konfirmasi ketersediaan obat alternatif di formularium", a: "Untuk suplemen vitamin C injeksi dan albumin 20% tersedia alternatif terapi oral dan donor plasma." }
     ],
     labData: "Kelompok VA: Epinefrin Injeksi, Insulin Reguler, Oksitosin Injeksi (Total Rp 450 Juta). Kelompok NC: Multivitamin Injeksi, Suplemen Enzim (Total Rp 320 Juta).",
-    decisionQuestion: "Manakah strategi rasionalisasi anggaran pengadaan yang paling tepat dan aman bagi pasien?",
-    options: [
-      { text: "Pertahankan 100% item kategori VA, VB, dan EA; eliminasi atau pangkas item kategori NC sebesar Rp 300 Juta", correct: true },
-      { text: "Pangkas seluruh anggaran obat secara merata 20% untuk semua item termasuk Epinefrin", correct: false },
-      { text: "Hentikan pengadaan Insulin dan antibiotik darurat untuk menutupi defisit", correct: false }
-    ]
+    decisionQuestion: "Manakah strategi rasionalisasi anggaran pengadaan yang paling tepat dan aman bagi pasien?"
   },
   {
     id: 5,
@@ -142,12 +124,7 @@ const DEFAULT_STATIONS = [
       { q: "Periksa lokasi penyimpanan KCl 7.46% di ruang rawat", a: "Ditemukan 5 vial KCl 7.46% tersimpan di rak terbuka bersama Natrium Klorida 0.9% tanpa label High Alert." }
     ],
     labData: "VVM Vaksin Polio: Kotak bagian dalam masih lebih terang dari lingkaran luar (Tahap 2: Boleh digunakan segera). VVM Vaksin Hepatitis B: Kotak sama gelap dengan lingkaran (Tahap 3: Jangan digunakan!).",
-    decisionQuestion: "Tindakan Apoteker yang paling tepat sesuai pedoman CDOB/Kemenkes adalah:",
-    options: [
-      { text: "Karantina vaksin tahap VVM 3 ke kotak terpisah berlabel MERAH, pindahkan KCl ke lemari terkunci berlabel High Alert, dan laporkan CAPA", correct: true },
-      { text: "Mengembalikan semua vaksin ke kulkas 2–8°C dan mengabaikan status indikator VVM", correct: false },
-      { text: "Membuang seluruh isi kulkas tanpa memeriksa indikator VVM", correct: false }
-    ]
+    decisionQuestion: "Tindakan Apoteker yang paling tepat sesuai pedoman CDOB/Kemenkes adalah:"
   },
   {
     id: 6,
@@ -171,12 +148,7 @@ const DEFAULT_STATIONS = [
       { q: "Sampaikan rekomendasi penggantian obat analgetik", a: "Terima kasih infonya, saya setuju Asam Mefenamat diganti Parasetamol saja dosis rendah jika nyeri." }
     ],
     labData: "Data Lab Tn. Anwar: Nilai INR saat ini = 2.6 (Target terapeutik: 2.0–3.0). Riwayat: Ulkus peptikum 2 tahun lalu.",
-    decisionQuestion: "Rekomendasi klinis yang wajib Anda berikan kepada dokter adalah:",
-    options: [
-      { text: "Menghentikan Asam Mefenamat karena meningkatkan risiko perdarahan lambung akibat efek antiplatelet dan ulserogenik; ganti dengan Parasetamol dosis terbagi", correct: true },
-      { text: "Menyetujui resep dan menaikkan dosis Warfarin menjadi 10 mg", correct: false },
-      { text: "Mengganti Warfarin dengan Aspirin 100 mg tanpa persetujuan dokter", correct: false }
-    ]
+    decisionQuestion: "Rekomendasi klinis yang wajib Anda berikan kepada dokter adalah:"
   },
   {
     id: 7,
@@ -200,12 +172,7 @@ const DEFAULT_STATIONS = [
       { q: "Tanyakan apakah sudah meminum obat lain sebelumnya", a: "Belum minum obat apapun, baru minum teh hangat dan madu tapi dahak masih susah keluar." }
     ],
     labData: "Kondisi Khusus: Ibu menyusui (Laktasi, Bayi 3 bulan). Kontraindikasi: Antitusif golongan Dekstrometorfan dosis tinggi atau Kodein.",
-    decisionQuestion: "Obat batuk dan anjuran manakah yang paling rasional untuk Ibu Maya?",
-    options: [
-      { text: "Tablet Gliseril Guaiakolat (Guaifenesin) 100 mg diminum 3 kali sehari 1 tablet sesudah makan dengan banyak air putih hangat", correct: true },
-      { text: "Sirup Dekstrometorfan HBr dicampur Pseudoefedrin dosis maksimal", correct: false },
-      { text: "Antibiotik Amoksisilin 500 mg tanpa resep dokter", correct: false }
-    ]
+    decisionQuestion: "Obat batuk dan anjuran manakah yang paling rasional untuk Ibu Maya?"
   },
   {
     id: 8,
@@ -229,12 +196,7 @@ const DEFAULT_STATIONS = [
       { q: "Konfirmasi ketersediaan kertas perkamen dan etiket", a: "Kertas perkamen, plastik klip obat, dan etiket putih untuk penggunaan oral sudah siap di meja." }
     ],
     labData: "Resep bertanda 'dtd' (da tales doses = berikan sekian takaran): 150 mg x 10 bungkus = 1.500 mg total Parasetamol. Tablet tersedia: 500 mg.",
-    decisionQuestion: "Berapa jumlah tablet Parasetamol 500 mg yang diambil dan berapa BUD maksimal puyer tersebut?",
-    options: [
-      { text: "Mengambil 3 tablet Parasetamol 500 mg (1.500 mg total), etiket putih, BUD maksimal 180 hari (6 bulan) atau 25% dari sisa ED", correct: true },
-      { text: "Mengambil 10 tablet Parasetamol 500 mg dengan etiket biru", correct: false },
-      { text: "Mengambil 1.5 tablet Parasetamol 500 mg dengan BUD 14 hari di suhu ruang", correct: false }
-    ]
+    decisionQuestion: "Berapa jumlah tablet Parasetamol 500 mg yang diambil dan berapa BUD maksimal puyer tersebut?"
   },
   {
     id: 9,
@@ -254,16 +216,11 @@ const DEFAULT_STATIONS = [
     ],
     competencies: "Pengumpulan Data, Penetapan Masalah, Penyelesaian Masalah, Komunikasi Efektif",
     npcDialogs: [
-      { q: "Gali riwayat batuk kering pasien untuk penilaian Algoritma Naranjo", a: "Batuk kering muncul 5 hari setelah mulai minum Kaptopril, tanpa demam. Saya belum pernah menyuntikkan insulin pen ini sebelumnya." },
+      { q: "Gali riwayat batuk kering pasien untuk penilaian Algoritma Naranjo", a: "Batuk kering tanpa dahak ini muncul 5 hari sejak saya rutin minum obat tensi Kaptopril 25 mg." },
       { q: "Edukasi cara penyimpanan insulin pen sebelum dan sesudah dibuka", a: "Baik Bu/Pak Apoteker, jadi pen yang belum dipakai disimpan di kulkas (2–8°C), sedangkan yang sedang dipakai disimpan di suhu ruang maksimal 28 hari ya." }
     ],
     labData: "Efek Samping Obat: Batuk kering persisten akibat akumulasi bradikinin oleh Kaptopril (Skor Naranjo = 7 / Probable). BUD Pen saat digunakan = 28 hari suhu ruang.",
-    decisionQuestion: "Manakah paket tindakan KIE dan MESO yang lengkap dan tepat untuk Ny. Ratna?",
-    options: [
-      { text: "Mendemonstrasikan teknik suntik subkutan & penyimpanan insulin (BUD 28 hari suhu ruang), mencatat ESO batuk Kaptopril pada Form MESO, dan menyarankan penggantian ke ARB kepada dokter", correct: true },
-      { text: "Menyuruh pasien menyimpan insulin yang sedang dipakai di dalam freezer (-15°C)", correct: false },
-      { text: "Memberikan obat batuk kodein tanpa mengevaluasi penggunaan Kaptopril", correct: false }
-    ]
+    decisionQuestion: "Manakah paket tindakan KIE dan MESO yang lengkap dan tepat untuk Ny. Ratna?"
   },
   {
     id: 10,
@@ -286,24 +243,15 @@ const DEFAULT_STATIONS = [
       { q: "Sapa pengawas ruang istirahat", a: "Silakan beristirahat dengan tenang. Anda telah bekerja dengan baik, tetap fokus untuk station selanjutnya." }
     ],
     labData: "Station Istirahat: Sesuai Blueprint UKAI OSCE, 1 putaran terdiri dari 9 station soal dan 1 station istirahat (total 10 station).",
-    decisionQuestion: "Konfirmasi kesiapan Anda di Station Istirahat:",
-    options: [
-      { text: "Saya beristirahat dengan tertib dan siap melanjutkan ke station berikutnya", correct: true }
-    ]
+    decisionQuestion: "Konfirmasi kesiapan Anda di Station Istirahat:"
   }
 ];
 
 // =========================================================================
-// RUBRIK CHECKLIST BERBOBOT, ITEM KRITIS (MUST-PASS), BANK KASUS & AI PERSONA
+// AI PERSONA & VARIAN STATION (UNTUK ADEGAN 3D & DIALOG NPC)
 // =========================================================================
 const STATION_ENRICHMENTS = [
   { // Station 1
-    checklist: [
-      { id: "c1_1", label: "Menggali data hasil sentrifugasi & viskositas sediaan", weight: 20, critical: false, domain: "Pengumpulan Data" },
-      { id: "c1_2", label: "Menghitung rasio Span 80 (1.40 g / 28%) & Tween 80 (3.60 g / 72%) untuk HLB 12.0", weight: 45, critical: true, domain: "Penyelesaian Masalah" },
-      { id: "c1_3", label: "Menetapkan antioksidan BHT & pemanis yang tepat untuk pediatrik", weight: 20, critical: false, domain: "Penetapan Masalah" },
-      { id: "c1_4", label: "Sikap profesional & sistematis dalam pelaporan R&D", weight: 15, critical: false, domain: "Sikap Profesional" }
-    ],
     aiPersona: {
       emotion: "Tegas & Analitis",
       greeting: "Selamat pagi Apoteker. Emulsi minyak ikan bets percobaan mengalami creaming. Silakan tanyakan data uji stabilitas atau laporkan perhitungan HLB Anda.",
@@ -318,12 +266,6 @@ const STATION_ENRICHMENTS = [
     ]
   },
   { // Station 2
-    checklist: [
-      { id: "c2_1", label: "Mengidentifikasi LOD granul terlalu kering (0.4% vs syarat 1.5–2.5%)", weight: 25, critical: false, domain: "Pengumpulan Data" },
-      { id: "c2_2", label: "Menurunkan kecepatan turret RPM & mengaktifkan gaya pra-kompresi (capping < 1%)", weight: 45, critical: true, domain: "Penyelesaian Masalah" },
-      { id: "c2_3", label: "Menetapkan parameter IPC kekerasan (4–8 kP) & kerapuhan (< 1%)", weight: 20, critical: false, domain: "Pencatatan & Pelaporan" },
-      { id: "c2_4", label: "Komunikasi teknis efektif dengan Supervisor Produksi", weight: 10, critical: false, domain: "Komunikasi Efektif" }
-    ],
     aiPersona: {
       emotion: "Khawatir (Target Produksi Mendesak)",
       greeting: "Apoteker, mesin cetak rotary sedang dihentikan sementara karena 14% tablet Parasetamol mengalami capping. Apa yang perlu Anda periksa?",
@@ -334,12 +276,6 @@ const STATION_ENRICHMENTS = [
     }
   },
   { // Station 3
-    checklist: [
-      { id: "c3_1", label: "Memverifikasi kesesuaian sistem HPLC (Resolusi > 2.0, Tailing 1.1, %RSD < 2%)", weight: 25, critical: false, domain: "Pengumpulan Data" },
-      { id: "c3_2", label: "Mengintegrasikan puncak kromatogram & menghitung kadar 102.5% (512.5 mg/tab)", weight: 45, critical: true, domain: "Penetapan Masalah" },
-      { id: "c3_3", label: "Menetapkan keputusan RELEASE bets sesuai Farmakope Indonesia VI (90–110%)", weight: 20, critical: true, domain: "Penyelesaian Masalah" },
-      { id: "c3_4", label: "Dokumentasi CoA (Certificate of Analysis) yang akurat", weight: 10, critical: false, domain: "Pencatatan & Pelaporan" }
-    ],
     aiPersona: {
       emotion: "Teliti & Kooperatif",
       greeting: "Halo Apoteker QA, injeksi sampel Amoksisilin bets B240801 sudah selesai di HPLC. Silakan periksa kesesuaian sistem dan integrasikan puncaknya.",
@@ -350,11 +286,6 @@ const STATION_ENRICHMENTS = [
     }
   },
   { // Station 4
-    checklist: [
-      { id: "c4_1", label: "Mengelompokkan obat ke dalam matriks ABC-VEN dengan benar", weight: 35, critical: false, domain: "Penetapan Masalah" },
-      { id: "c4_2", label: "Mempertahankan 100% obat Vital (VA/VB) & memangkas kelompok Non-Esensial (NC)", weight: 45, critical: true, domain: "Penyelesaian Masalah" },
-      { id: "c4_3", label: "Menghitung kebutuhan buffer stock & lead time pengadaan", weight: 20, critical: false, domain: "Pengumpulan Data" }
-    ],
     aiPersona: {
       emotion: "Serius (Defisit Anggaran Rp 300 Juta)",
       greeting: "Apoteker, direksi meminta kita memangkas pengajuan anggaran obat sebesar Rp 300 Juta hari ini tanpa menyebabkan kekosongan obat emergensi.",
@@ -365,11 +296,6 @@ const STATION_ENRICHMENTS = [
     }
   },
   { // Station 5
-    checklist: [
-      { id: "c5_1", label: "Memeriksa riwayat suhu data logger chiller (11.2°C selama 4 jam) & status VVM", weight: 25, critical: false, domain: "Pengumpulan Data" },
-      { id: "c5_2", label: "Mengkarantina Vaksin VVM Tahap 3 ke wadah merah & memisahkan High Alert KCl 7.46%", weight: 50, critical: true, domain: "Penyelesaian Masalah" },
-      { id: "c5_3", label: "Menata obat LASA dengan metode Tall-Man Lettering & membuat laporan CAPA", weight: 25, critical: false, domain: "Pencatatan & Pelaporan" }
-    ],
     aiPersona: {
       emotion: "Kritis & Objektif (Auditor CDOB)",
       greeting: "Saya menemukan suhu chiller vaksin sempat menyentuh 11.2°C dan ada vial KCl pekat di rak terbuka. Jelaskan tindakan korektif Anda!",
@@ -380,11 +306,6 @@ const STATION_ENRICHMENTS = [
     }
   },
   { // Station 6
-    checklist: [
-      { id: "c6_1", label: "Mengidentifikasi interaksi mayor Warfarin + Asam Mefenamat (risiko perdarahan GI)", weight: 35, critical: true, domain: "Penetapan Masalah" },
-      { id: "c6_2", label: "Menghubungi dokter dengan struktur komunikasi SBAR yang sopan & jelas", weight: 30, critical: false, domain: "Komunikasi Efektif" },
-      { id: "c6_3", label: "Merekomendasikan penggantian Asam Mefenamat ke Parasetamol", weight: 35, critical: true, domain: "Penyelesaian Masalah" }
-    ],
     aiPersona: {
       emotion: "Sibuk namun Terbuka terhadap Bukti Klinis",
       greeting: "Halo Apoteker, saya dr. Bambang Sp.PD. Ada yang perlu dikonfirmasi terkait resep pasien saya, Tn. Anwar?",
@@ -395,11 +316,6 @@ const STATION_ENRICHMENTS = [
     }
   },
   { // Station 7
-    checklist: [
-      { id: "c7_1", label: "Menggali informasi pasien dengan metode WWHAM (menemukan kondisi menyusui)", weight: 35, critical: true, domain: "Pengumpulan Data" },
-      { id: "c7_2", label: "Memilih Gliseril Guaiakolat (Guaifenesin) 100 mg yang aman bagi ibu menyusui", weight: 40, critical: true, domain: "Penyelesaian Masalah" },
-      { id: "c7_3", label: "Memberikan KIE aturan pakai & terapi non-farmakologis (minum air hangat)", weight: 25, critical: false, domain: "Komunikasi Efektif" }
-    ],
     aiPersona: {
       emotion: "Cemas & Ingin Cepat Sembuh",
       greeting: "Selamat siang Apoteker, saya mau beli obat batuk yang paling ampuh dong, tenggorokan saya gatal dan batuk terus.",
@@ -410,11 +326,6 @@ const STATION_ENRICHMENTS = [
     }
   },
   { // Station 8
-    checklist: [
-      { id: "c8_1", label: "Menghitung kebutuhan Parasetamol 500 mg = 3 tablet (1.500 mg untuk 10 bungkus dtd)", weight: 45, critical: true, domain: "Penyelesaian Masalah" },
-      { id: "c8_2", label: "Menimbang & menggerus serbuk homogen di lumpang porselen", weight: 20, critical: false, domain: "Penetapan Masalah" },
-      { id: "c8_3", label: "Menetapkan Etiket Putih (obat dalam) & BUD maksimal 180 hari (6 bulan)", weight: 35, critical: true, domain: "Pencatatan & Pelaporan" }
-    ],
     aiPersona: {
       emotion: "Tenang & Mengamati (Penguji Compounding)",
       greeting: "Silakan lakukan perhitungan kebutuhan tablet untuk resep puyer DTD ini, timbang di timbangan virtual, dan tetapkan BUD-nya.",
@@ -425,11 +336,6 @@ const STATION_ENRICHMENTS = [
     }
   },
   { // Station 9
-    checklist: [
-      { id: "c9_1", label: "Mendemonstrasikan teknik suntik Pen Insulin (priming 2u, subkutan 90°, tahan 10 detik) & BUD 28 hari suhu ruang", weight: 45, critical: true, domain: "Komunikasi Efektif" },
-      { id: "c9_2", label: "Mengidentifikasi ESO batuk kering Kaptopril (Skor Naranjo Probable) & mengisi Form MESO", weight: 35, critical: true, domain: "Penetapan Masalah" },
-      { id: "c9_3", label: "Menyarankan konsultasi ke dokter untuk peralihan ACEi (Kaptopril) ke ARB", weight: 20, critical: false, domain: "Penyelesaian Masalah" }
-    ],
     aiPersona: {
       emotion: "Bingung & Batuk Kering Sesekali",
       greeting: "Uhuk.. Permisi Apoteker, saya baru pertama kali dapat resep suntikan pen insulin ini, saya takut salah pakai. Terus kenapa ya saya batuk kering terus?",
@@ -440,9 +346,6 @@ const STATION_ENRICHMENTS = [
     }
   },
   { // Station 10
-    checklist: [
-      { id: "c10_1", label: "Beristirahat dengan tertib sesuai tata tertib OSCE", weight: 100, critical: false, domain: "Sikap Profesional" }
-    ],
     aiPersona: {
       emotion: "Ramah",
       greeting: "Silakan duduk beristirahat dengan tenang sambil menunggu bel rotasi berikutnya.",
@@ -453,57 +356,38 @@ const STATION_ENRICHMENTS = [
 
 DEFAULT_STATIONS.forEach((st, idx) => {
   const enrich = STATION_ENRICHMENTS[idx] || {};
-  st.checklist = enrich.checklist || [];
   st.aiPersona = enrich.aiPersona || { emotion: "Netral", greeting: "Silakan mulai.", hiddenFacts: [] };
   st.variants = enrich.variants || [];
 });
 
 // =========================================================================
-// BANK SOAL KHUSUS KORIDOR B (PAKET SOAL & KASUS ALTERNATIF)
-// Memberikan variasi kasus berbeda antara Koridor A dan Koridor B
+// METADATA ALTERNATIF KORIDOR B (WING 1)
 // =========================================================================
 const DEFAULT_STATIONS_WING_B = JSON.parse(JSON.stringify(DEFAULT_STATIONS));
 
-// Modifikasi kasus & soal spesifik untuk Koridor B
 if (DEFAULT_STATIONS_WING_B[0]) {
   DEFAULT_STATIONS_WING_B[0].title = "R&D Sediaan Suspensi Antasida (Suspending Agent & Viskositas)";
   DEFAULT_STATIONS_WING_B[0].doorShortInstruction = "EVALUASI LAJU ENDAP & FLOKULASI SUSPENSI ANTASIDA. HITUNG KONSENTRASI SUSPENDING AGENT PGS & XANTHAN GUM.";
   DEFAULT_STATIONS_WING_B[0].scenario = "Anda adalah Apoteker R&D yang merancang formula suspensi antasida (Alumunium Hidroksida & Magnesium Hidroksida). Formula mengalami caking keras yang sulit diredispersi.";
   DEFAULT_STATIONS_WING_B[0].decisionQuestion = "Sistem suspensi apa dan kombinasi pensuspensi yang paling tepat untuk mencegah caking?";
-  DEFAULT_STATIONS_WING_B[0].options = [
-    { text: "Membentuk suspensi terflokulasi dengan penambahan suspending agent Xanthan Gum 0.2% dan elektrolit KH2PO4", correct: true },
-    { text: "Membentuk suspensi deflokulasi murni tanpa agen pembasah", correct: false },
-    { text: "Menaikkan kadar gliserin hingga 40% tanpa bahan pensuspensi", correct: false }
-  ];
 }
 if (DEFAULT_STATIONS_WING_B[1]) {
   DEFAULT_STATIONS_WING_B[1].title = "Manufaktur Kapsul Keras & Uji Keseragaman Bobot (IPC)";
   DEFAULT_STATIONS_WING_B[1].doorShortInstruction = "ANALISIS PENYEBAB KERAGAMAN BOBOT KAPSUL CEFADROXIL PADA MESIN FILLING OTOMATIS.";
   DEFAULT_STATIONS_WING_B[1].decisionQuestion = "Langkah optimalisasi mesin pengisi kapsul (dosator) untuk mengatasi variasi bobot adalah:";
-  DEFAULT_STATIONS_WING_B[1].options = [
-    { text: "Kalibrasi tinggi tamping pin dosator, perbaiki sifat alir serbuk dengan glidan aerosil 0.5%, dan kontrol kelembapan ruang < 40%", correct: true },
-    { text: "Menaikkan kecepatan putar mesin tanpa memeriksa kompaktibilitas serbuk", correct: false },
-    { text: "Mengganti ukuran cangkang kapsul dari 0 ke nomor 3 tanpa reformulasi", correct: false }
-  ];
 }
 if (DEFAULT_STATIONS_WING_B[2]) {
   DEFAULT_STATIONS_WING_B[2].title = "QC Spektrofotometri UV-Vis & Uji Disolusi Terbanding (F2)";
   DEFAULT_STATIONS_WING_B[2].doorShortInstruction = "HITUNG NILAI FAKTOR KEMIRIPAN (F2) PADA UJI DISOLUSI TERBANDING TABLET FUROSEMID.";
   DEFAULT_STATIONS_WING_B[2].decisionQuestion = "Berapa kesimpulan nilai f2 jika profil pelepasan obat uji mendekati obat inovator (f2 = 64.2)?";
-  DEFAULT_STATIONS_WING_B[2].options = [
-    { text: "Nilai f2 = 64.2 (> 50), profil disolusi dinyatakan ekivalen / bioekivalen secara in vitro terhadap inovator", correct: true },
-    { text: "Nilai f2 = 64.2 dinyatakan gagal karena nilai f2 harus di bawah 40", correct: false },
-    { text: "Uji harus diulang karena Farmakope mensyaratkan f2 harus tepat 100", correct: false }
-  ];
 }
 
-// Bank Soal per Koridor (Wing 0 = Koridor A, Wing 1 = Koridor B)
+// Bank Metadata per Koridor (Wing 0 = Koridor A, Wing 1 = Koridor B)
 const STATIONS_WINGS = {
   0: JSON.parse(JSON.stringify(DEFAULT_STATIONS)),
   1: JSON.parse(JSON.stringify(DEFAULT_STATIONS_WING_B))
 };
 
-// In-Memory & LocalStorage Persisted Stations Data
 let STATIONS = JSON.parse(JSON.stringify(DEFAULT_STATIONS));
 
 function syncActiveStations(wing = 0) {
@@ -520,47 +404,7 @@ function getStationData(wing, stationIdx) {
   return STATIONS_WINGS[w]?.[stationIdx] || STATIONS[stationIdx];
 }
 
-// Acak urutan pilihan jawaban per sesi kandidat agar 2.000 mahasiswa tidak sama persis urutannya
-function randomizeStationOptionsForCandidate(seedStr = "") {
-  let seed = 0;
-  for (let i = 0; i < seedStr.length; i++) seed = (seed * 31 + seedStr.charCodeAt(i)) & 0x7fffffff;
-  if (!seed) seed = Date.now() & 0x7fffffff;
-
-  STATIONS.forEach((st, idx) => {
-    if (!st.options || st.options.length <= 1) return;
-    const arr = st.options.map((o, origIdx) => ({ ...o, origIdx }));
-    for (let i = arr.length - 1; i > 0; i--) {
-      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
-      const j = (seed + idx) % (i + 1);
-      const tmp = arr[i];
-      arr[i] = arr[j];
-      arr[j] = tmp;
-    }
-    st.options = arr;
-  });
-}
-
 function loadCustomStationData() {
-  try {
-    // Muat Koridor A
-    const savedA = localStorage.getItem("osce_custom_stations_wing_0") || localStorage.getItem("osce_custom_stations_data");
-    if (savedA) {
-      const parsedA = JSON.parse(savedA);
-      if (Array.isArray(parsedA) && parsedA.length === 10) {
-        STATIONS_WINGS[0] = parsedA.map((s, idx) => ({ ...DEFAULT_STATIONS[idx], ...s }));
-      }
-    }
-    // Muat Koridor B
-    const savedB = localStorage.getItem("osce_custom_stations_wing_1");
-    if (savedB) {
-      const parsedB = JSON.parse(savedB);
-      if (Array.isArray(parsedB) && parsedB.length === 10) {
-        STATIONS_WINGS[1] = parsedB.map((s, idx) => ({ ...DEFAULT_STATIONS_WING_B[idx], ...s }));
-      }
-    }
-  } catch (e) {
-    console.warn("Gagal memuat custom stations data:", e);
-  }
   const curWing = (typeof state !== "undefined" && state.wing === 1) ? 1 : 0;
   syncActiveStations(curWing);
   return STATIONS;
@@ -571,16 +415,6 @@ function saveCustomStationData(stationIdx, updatedData, wing = 0) {
   const targetWing = (wing === 1) ? 1 : 0;
   if (!STATIONS_WINGS[targetWing]) STATIONS_WINGS[targetWing] = JSON.parse(JSON.stringify(DEFAULT_STATIONS));
   STATIONS_WINGS[targetWing][stationIdx] = { ...STATIONS_WINGS[targetWing][stationIdx], ...updatedData };
-  
-  try {
-    localStorage.setItem(`osce_custom_stations_wing_${targetWing}`, JSON.stringify(STATIONS_WINGS[targetWing]));
-    if (targetWing === 0) {
-      localStorage.setItem("osce_custom_stations_data", JSON.stringify(STATIONS_WINGS[0]));
-    }
-  } catch (e) {
-    console.warn("Gagal menyimpan custom stations data:", e);
-  }
-
   const curWing = (typeof state !== "undefined" && state.wing === 1) ? 1 : 0;
   if (curWing === targetWing) {
     syncActiveStations(curWing);
@@ -591,15 +425,9 @@ function saveCustomStationData(stationIdx, updatedData, wing = 0) {
 function resetStationsToDefault() {
   STATIONS_WINGS[0] = JSON.parse(JSON.stringify(DEFAULT_STATIONS));
   STATIONS_WINGS[1] = JSON.parse(JSON.stringify(DEFAULT_STATIONS_WING_B));
-  try {
-    localStorage.removeItem("osce_custom_stations_wing_0");
-    localStorage.removeItem("osce_custom_stations_wing_1");
-    localStorage.removeItem("osce_custom_stations_data");
-  } catch (e) {}
   syncActiveStations(0);
   return STATIONS;
 }
 
-// Initial load
+// Inisialisasi awal
 loadCustomStationData();
-

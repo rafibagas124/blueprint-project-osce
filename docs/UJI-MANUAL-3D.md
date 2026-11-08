@@ -58,3 +58,11 @@ Dokumen ini berisi panduan pengujian manual melalui peramban web (browser) untuk
      - Notifikasi hanya menampilkan: `"Jawaban diterima."`
      - Tidak ada skor, status benar/salah, maupun kunci jawaban yang ditampilkan kepada mahasiswa.
    - Buka kembali lembar kerja Stasiun 01: tombol kirim terkunci (disabled) dan tidak dapat mengirim ulang.
+
+6. **Pemeriksaan DevTools (Tab Sources dan Tab Network)**:
+   - Buka DevTools (`F12`) -> Tab **Sources**:
+     - Buka `js/stations-data.js` dan `js/scoring.js`.
+     - Verifikasi tidak ada kunci jawaban, penanda `correct`, `EXPLAIN`, `getStationRationale`, `rationale`, atau `checklist` dengan bobot di dalam file klien.
+   - Buka DevTools -> Tab **Network**:
+     - Periksa panggilan `GET /api/station/:stationNo`: verifikasi bahwa data soal tidak memuat kunci jawaban maupun pembahasan.
+     - Periksa panggilan `POST /api/submit`: verifikasi respons hanya berisikan `{ accepted: true, stationNo }` tanpa skor atau indikator evaluasi jawaban.

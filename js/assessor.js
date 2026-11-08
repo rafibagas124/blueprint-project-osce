@@ -15,9 +15,9 @@ function pushLiveGradingEvent(ev) {
     name: ev.name || "Mahasiswa",
     nim: ev.nim || "-",
     stationIdx: Number(ev.stationIdx) || 0,
-    isCorrect: Boolean(ev.isCorrect),
+    passed: Boolean(ev.isCorrect ?? ev.passed),
     score: Number(ev.score) || 0,
-    globalRating: ev.globalRating || (ev.isCorrect ? "PASS" : "BORDERLINE"),
+    globalRating: ev.globalRating || ((ev.isCorrect ?? ev.passed) ? "PASS" : "BORDERLINE"),
     nextStationIdx: ((Number(ev.stationIdx) || 0) + 1) % 10
   };
   liveGradingFeed.unshift(item);
@@ -25,8 +25,8 @@ function pushLiveGradingEvent(ev) {
 
   if (typeof state !== "undefined" && state.userProfile.role === "assessor") {
     showToast(
-      `📥 Real-Time Koreksi: ${item.name} selesai S0${item.stationIdx + 1} → ${item.isCorrect ? "BENAR ✓" : "SALAH ✗"} (Skor ${item.score}) • Lanjut S0${item.nextStationIdx + 1}`,
-      item.isCorrect ? "success" : "warning"
+      `📥 Real-Time Koreksi: ${item.name} selesai S0${item.stationIdx + 1} → ${item.passed ? "BENAR ✓" : "SALAH ✗"} (Skor ${item.score}) • Lanjut S0${item.nextStationIdx + 1}`,
+      item.passed ? "success" : "warning"
     );
   }
   updateAssessorHUD();
@@ -220,13 +220,13 @@ function updateAssessorHUD() {
           ${liveGradingFeed.length === 0
       ? `<div class="text-slate-400 italic text-[10px]">Menunggu mahasiswa menyelesaikan tugas stasiun...</div>`
       : liveGradingFeed.slice(0, 8).map((f) => `
-              <div class="p-1.5 rounded bg-slate-900 border ${f.isCorrect ? 'border-emerald-500/40' : 'border-rose-500/40'} flex items-center justify-between gap-1">
+              <div class="p-1.5 rounded bg-slate-900 border ${(f.passed ?? f.isCorrect) ? 'border-emerald-500/40' : 'border-rose-500/40'} flex items-center justify-between gap-1">
                 <div class="truncate">
                   <span class="font-bold text-white">${f.name}</span>
                   <span class="text-slate-300">• S0${f.stationIdx + 1}→S0${f.nextStationIdx + 1}</span>
                 </div>
-                <span class="px-1.5 py-0.5 rounded font-black shrink-0 ${f.isCorrect ? 'bg-emerald-700 text-white' : 'bg-rose-700 text-white'}">
-                  ${f.isCorrect ? 'BENAR' : 'SALAH'} (${f.score})
+                <span class="px-1.5 py-0.5 rounded font-black shrink-0 ${(f.passed ?? f.isCorrect) ? 'bg-emerald-700 text-white' : 'bg-rose-700 text-white'}">
+                  ${(f.passed ?? f.isCorrect) ? 'BENAR' : 'SALAH'} (${f.score})
                 </span>
               </div>
             `).join("")}
@@ -353,21 +353,6 @@ function loadStationToEditForm() {
   document.getElementById("edit-st-scenario").value = st.scenario || "";
   document.getElementById("edit-st-tasks").value = (st.tasks || []).join("\n");
   document.getElementById("edit-st-competencies").value = st.competencies || "";
-
-  const qEl = document.getElementById("edit-st-question");
-  const opt0El = document.getElementById("edit-st-opt0");
-  const opt1El = document.getElementById("edit-st-opt1");
-  const opt2El = document.getElementById("edit-st-opt2");
-  const corrEl = document.getElementById("edit-st-correct");
-  if (qEl) qEl.value = st.decisionQuestion || "";
-  const opts = st.options || [];
-  if (opt0El) opt0El.value = opts[0] ? opts[0].text : "";
-  if (opt1El) opt1El.value = opts[1] ? opts[1].text : "";
-  if (opt2El) opt2El.value = opts[2] ? opts[2].text : "";
-  if (corrEl) {
-    const corrIdx = Math.max(0, opts.findIndex((o) => o && o.correct));
-    corrEl.value = String(corrIdx);
-  }
 }
 
 function saveEditedInstructionFromForm() {
@@ -376,24 +361,6 @@ function saveEditedInstructionFromForm() {
   const targetWing = selectWing ? parseInt(selectWing.value, 10) : 0;
   const stationIdx = selectSt ? parseInt(selectSt.value, 10) : 0;
   if (isNaN(stationIdx)) return;
-
-  const qEl = document.getElementById("edit-st-question");
-  const opt0El = document.getElementById("edit-st-opt0");
-  const opt1El = document.getElementById("edit-st-opt1");
-  const opt2El = document.getElementById("edit-st-opt2");
-  const corrEl = document.getElementById("edit-st-correct");
-  const corrIdx = corrEl ? parseInt(corrEl.value, 10) : 0;
-
-  const rawOpts = [
-    opt0El ? opt0El.value.trim() : "",
-    opt1El ? opt1El.value.trim() : "",
-    opt2El ? opt2El.value.trim() : ""
-  ].filter((t) => t.length > 0);
-
-  const updatedOptions = rawOpts.map((text, idx) => ({
-    text,
-    correct: idx === (corrIdx < rawOpts.length ? corrIdx : 0)
-  }));
 
   const baseStation = (typeof getStationData === "function")
     ? getStationData(targetWing, stationIdx)
@@ -404,22 +371,16 @@ function saveEditedInstructionFromForm() {
     doorShortInstruction: document.getElementById("edit-st-door-text").value.trim(),
     scenario: document.getElementById("edit-st-scenario").value.trim(),
     tasks: document.getElementById("edit-st-tasks").value.split("\n").filter((t) => t.trim().length > 0),
-    competencies: document.getElementById("edit-st-competencies").value.trim(),
-    decisionQuestion: qEl && qEl.value.trim() ? qEl.value.trim() : (baseStation?.decisionQuestion || ""),
-    options: updatedOptions.length > 0 ? updatedOptions : (baseStation?.options || [])
+    competencies: document.getElementById("edit-st-competencies").value.trim()
   };
 
-  saveCustomStationData(stationIdx, updatedData, targetWing);
   if (typeof updateStationDoorPoster === "function") {
     updateStationDoorPoster(stationIdx, targetWing);
-  }
-  if (typeof netSendStationQuiz === "function") {
-    netSendStationQuiz(stationIdx, updatedData, targetWing);
   }
 
   playBell("chime");
   const wingName = targetWing === 1 ? "KORIDOR B" : "KORIDOR A";
-  showToast(`Soal & Kunci Jawaban Station ${stationIdx + 1} (${wingName}) berhasil disimpan & disinkronkan!`, "success");
+  showToast(`Petunjuk Station ${stationIdx + 1} (${wingName}) berhasil diperbarui!`, "success");
   closeEditInstructionModal();
   updateHUD();
 }
@@ -450,7 +411,7 @@ function renderAssessorScoreTable() {
   if (netMode !== "ws") {
     const stations = {};
     state.stationProgress.forEach((p, i) => {
-      if (p.completed) stations[i] = { isCorrect: !!p.isCorrect, score: p.score, globalRating: p.globalRating };
+      if (p.completed) stations[i] = { passed: !!(p.isCorrect ?? p.passed), score: p.score, globalRating: p.globalRating };
     });
     records = [{ nim: state.userProfile.nim, name: state.userProfile.name, room: state.roomId || 1, stations }];
   }
@@ -460,13 +421,14 @@ function renderAssessorScoreTable() {
     Object.keys(r.stations || {}).sort((a, b) => a - b).forEach((idx) => {
       const s = r.stations[idx];
       if (OSCE_SCORING.isRestStation(Number(idx))) return;
+      const isPass = Boolean(s.passed ?? s.isCorrect);
       rows.push(`
-        <tr class="${s.isCorrect ? "bg-emerald-50/60" : "bg-rose-50/60"} text-[11px]">
+        <tr class="${isPass ? "bg-emerald-50/60" : "bg-rose-50/60"} text-[11px]">
           <td class="p-2 font-mono">${r.nim}</td>
           <td class="p-2 font-semibold">${r.name}</td>
           <td class="p-2 text-center">${r.room ?? "-"}</td>
           <td class="p-2 text-center font-bold">${Number(idx) + 1}</td>
-          <td class="p-2 text-center font-black ${s.isCorrect ? "text-emerald-700" : "text-rose-600"}">${s.globalRating || (s.isCorrect ? "PASS" : "BORDERLINE")}</td>
+          <td class="p-2 text-center font-black ${isPass ? "text-emerald-700" : "text-rose-600"}">${s.globalRating || (isPass ? "PASS" : "BORDERLINE")}</td>
           <td class="p-2 text-center font-bold">${s.score}</td>
           <td class="p-2 text-center">
             <input type="number" min="0" max="100" value="${s.assessorScore ?? ""}" data-nim="${r.nim}" data-idx="${idx}"
