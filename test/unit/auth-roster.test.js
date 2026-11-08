@@ -2,6 +2,7 @@ const { describe, it, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 const { WebSocket } = require("ws");
 const bcrypt = require("bcryptjs");
+const crypto = require("node:crypto");
 const { app, server, wss, store, signJwt, verifyJwt, nimFailedAttempts, clearLoginFailure } = require("../../server");
 const { runDevSeeder } = require("../../src/scripts/seed-dev");
 const { runRosterSeeder } = require("../../src/scripts/seed-roster");
@@ -12,7 +13,8 @@ describe("Unit & Integration Test: Fase 2 Roster & Login Authoritative", () => {
   let testPort;
   let baseUrl;
   let wsUrl;
-  const devToken = "TK-DEV-TEST-SECRET";
+  const devToken = "TK-DEV-" + crypto.randomBytes(8).toString("hex");
+  const randomAssessorPass = "Pass_" + crypto.randomBytes(8).toString("hex") + "!#";
 
   before(async () => {
     await store.clear();
@@ -32,7 +34,7 @@ describe("Unit & Integration Test: Fase 2 Roster & Login Authoritative", () => {
     // Daftarkan asesor uji
     await store.saveAssessor({
       username: "asesor_osce",
-      passwordHash: bcrypt.hashSync("passwordAsesor123", 10),
+      passwordHash: bcrypt.hashSync(randomAssessorPass, 10),
       nama: "dr. Budi, Sp.FRS",
       role: "assessor"
     });
@@ -154,7 +156,7 @@ describe("Unit & Integration Test: Fase 2 Roster & Login Authoritative", () => {
     const loginRes = await fetch(`${baseUrl}/api/auth/login-assessor`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: "asesor_osce", password: "passwordAsesor123" })
+      body: JSON.stringify({ username: "asesor_osce", password: randomAssessorPass })
     });
     assert.equal(loginRes.status, 200);
     const loginBody = await loginRes.json();

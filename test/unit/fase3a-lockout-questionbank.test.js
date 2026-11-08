@@ -4,6 +4,7 @@
 const { describe, it, before, after, beforeEach } = require("node:test");
 const assert = require("node:assert/strict");
 const bcrypt = require("bcryptjs");
+const crypto = require("node:crypto");
 
 const {
   app,
@@ -34,7 +35,7 @@ before(async () => {
   // Daftarkan asesor / koordinator
   await store.saveAssessor({
     username: "koordinator_3a",
-    passwordHash: bcrypt.hashSync("passwordKoor123", 10),
+    passwordHash: bcrypt.hashSync(crypto.randomBytes(16).toString("hex"), 10),
     nama: "dr. Koordinator, Sp.FRS",
     role: "coordinator"
   });

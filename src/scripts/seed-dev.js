@@ -36,12 +36,6 @@ const DEV_STUDENTS = [
   { nim: "DEV-020", nama: "apt. Taufik Hidayat, S.Farm", gender: "L", corridor: "KOR-B", group: "GRP-DEV", seat: 10 }
 ];
 
-const DEV_ASSESSORS = [
-  { username: "asesor1", passwordPlain: "asesor123", nama: "dr. Budi Santoso, Sp.FRS", role: "assessor" },
-  { username: "asesor2", passwordPlain: "asesor123", nama: "apt. Siti Nurhaliza, M.Farm", role: "assessor" },
-  { username: "koordinator", passwordPlain: "admin123", nama: "Koordinator Ujian OSCE UKMPPAI", role: "coordinator" }
-];
-
 async function runDevSeeder(customStore = null) {
   // ATURAN MUTLAK: Menolak jalan jika NODE_ENV=production
   if (process.env.NODE_ENV === "production") {
@@ -65,18 +59,7 @@ async function runDevSeeder(customStore = null) {
     tokenRecords.push({ ...s, token: plaintextToken });
   }
 
-  // 2. Daftarkan akun Asesor & Koordinator
-  for (const a of DEV_ASSESSORS) {
-    const passwordHash = bcrypt.hashSync(a.passwordPlain, 10);
-    await store.saveAssessor({
-      username: a.username,
-      passwordHash,
-      nama: a.nama,
-      role: a.role
-    });
-  }
-
-  // 3. Tulis file data/dev_tokens.csv (masuk .gitignore)
+  // 2. Tulis file data/dev_tokens.csv (masuk .gitignore)
   const defaultOutputDir = path.join(process.cwd(), "data");
   if (!fs.existsSync(defaultOutputDir)) {
     fs.mkdirSync(defaultOutputDir, { recursive: true });
@@ -88,9 +71,9 @@ async function runDevSeeder(customStore = null) {
   });
   fs.writeFileSync(outPath, csvOut, "utf8");
 
-  console.log(`[seed:dev] Sukses mendaftarkan 20 mahasiswa DEV dan ${DEV_ASSESSORS.length} akun asesor.`);
+  console.log(`[seed:dev] Sukses mendaftarkan 20 mahasiswa DEV.`);
   console.log(`[seed:dev] Token mahasiswa DEV disimpan ke: ${outPath}`);
-  return { students: tokenRecords, assessors: DEV_ASSESSORS, outputPath: outPath };
+  return { students: tokenRecords, outputPath: outPath };
 }
 
 if (require.main === module) {
@@ -102,4 +85,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { runDevSeeder, DEV_STUDENTS, DEV_ASSESSORS };
+module.exports = { runDevSeeder, DEV_STUDENTS };

@@ -53,7 +53,7 @@ function loadDotEnv() {
         process.env[key] = val;
       }
     });
-  } catch (e) {}
+  } catch (e) { }
 }
 loadDotEnv();
 
@@ -213,7 +213,7 @@ async function handleWsMessage(client, rawText) {
           };
         });
       }
-    } catch (e) {}
+    } catch (e) { }
 
     send(client, {
       type: "joined",
@@ -498,7 +498,7 @@ app.post("/api/auth/unlock-account", async (req, res) => {
   }
 
   const claims = verifyJwt(token);
-  if (!claims || claims.role !== "coordinator") {
+  if (!claims || (claims.role !== "coordinator" && claims.role !== "koordinator")) {
     return res.status(403).json({ error: "Hanya koordinator yang berwenang membuka kunci akun." });
   }
 
@@ -622,7 +622,7 @@ app.get("/api/scores.csv", async (req, res) => {
   }
 
   const claims = verifyJwt(token);
-  if (!claims || (claims.role !== "assessor" && claims.role !== "coordinator")) {
+  if (!claims || (claims.role !== "assessor" && claims.role !== "asesor" && claims.role !== "coordinator" && claims.role !== "koordinator")) {
     return res.status(403).send("Akses ditolak: Hanya untuk Asesor dan Koordinator.");
   }
 
@@ -674,7 +674,7 @@ app.post("/api/ai-npc", async (req, res) => {
           return res.json({ reply: txt.trim(), costUsd: usage.costUsd, provider: "gemini" });
         }
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   return res.json({

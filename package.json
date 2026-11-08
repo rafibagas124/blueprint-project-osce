@@ -12,6 +12,7 @@
     "dev": "node --watch server.js",
     "seed:roster": "node src/scripts/seed-roster.js",
     "seed:dev": "node src/scripts/seed-dev.js",
+    "create:assessor": "node src/scripts/create-assessor.js",
     "test": "node --test test/**/*.test.js"
   },
   "keywords": [
