@@ -79,39 +79,88 @@ function wireEvents() {
     currentWorkTab = "form";
     renderWorkstationModal();
   });
-  document.getElementById("btn-complete-station").addEventListener("click", () => {
+  document.getElementById("btn-complete-station").addEventListener("click", async () => {
     const idx = state.currentStationIdx;
-    const prog = state.stationProgress[idx];
-    if (selectedDecision === null && !(prog && prog.simSolved)) {
-      showToast(typeof OSCE_I18N !== "undefined" ? OSCE_I18N.t("toast_select_decision") : "Pilih salah satu jawaban atau selesaikan simulasi interaktif terlebih dahulu.", "warning");
+    const stationNo = idx + 1; // TODO Fase 4: rotasi dinamis per ronde akan disinkronkan dari server
+
+    // Stasiun 10 adalah stasiun istirahat: tidak submit ke server
+    if (stationNo === 10) {
+      if (!state.stationProgress[idx]) state.stationProgress[idx] = {};
+      state.stationProgress[idx].completed = true;
+      selectedDecision = null;
+      closeWorkstationModal();
+      exitStationRoomToCorridor();
+      if (typeof peerBotsExitToCorridor === "function") peerBotsExitToCorridor();
+      updateDoorStatusLamps(state.phase, idx);
+      showToast("Istirahat selesai. Kembali ke koridor.", "info");
+      setTimeout(() => {
+        advanceToNextStation();
+      }, 1400);
+      return;
+    }
+
+    // Validasi pemilihan opsi jawaban (tidak ada fallback selectedDecision ?? 0)
+    if (selectedDecision === null || selectedDecision === undefined || selectedDecision === "") {
+      showToast(typeof OSCE_I18N !== "undefined" ? OSCE_I18N.t("toast_select_decision") : "Pilih salah satu jawaban terlebih dahulu sebelum menyelesaikan stasiun.", "warning");
       currentWorkTab = "form";
       renderWorkstationModal();
       return;
     }
-    const chosenIdx = selectedDecision !== null ? selectedDecision : 0;
-    const result = OSCE_SCORING.evaluateStudentDecision(idx, chosenIdx);
-    selectedDecision = null;
-    closeWorkstationModal();
 
-    // 1. Kembalikan peserta & seluruh teman sekoridor dari dalam ruangan ke koridor terlebih dahulu
-    exitStationRoomToCorridor();
-    if (typeof peerBotsExitToCorridor === "function") peerBotsExitToCorridor();
-    updateDoorStatusLamps(state.phase, idx);
+    // Kunci stasiun jika sudah pernah disubmit
+    if (typeof ExamAPI !== "undefined" && ExamAPI.isStationSubmitted(stationNo)) {
+      showToast("Jawaban stasiun ini sudah diterima sebelumnya.", "info");
+      closeWorkstationModal();
+      return;
+    }
 
-    const nextStCode = STATIONS[(idx + 1) % STATIONS.length].code;
-    if (result && !OSCE_SCORING.isRestStation(idx)) {
-      const statusText = result.isCorrect ? "BENAR ✓" : "SALAH ✗";
-      showToast(`Terkirim ke Dosen: ${statusText} (Skor: ${result.score} • ${result.globalRating}). Kembali ke koridor → lanjut ke ${nextStCode}`, result.isCorrect ? "success" : "warning");
-      updateSubtitle(`Tugas ${STATIONS[idx].code} selesai & terkirim ke Dosen (${statusText}, Skor ${result.score}). Anda kembali di koridor (Lampu Pintu MERAH). Bersiap rotasi ke ${nextStCode}...`);
+    // Konfirmasi sebelum submit
+    const confirmed = window.confirm("Yakin kirim jawaban? Jawaban tidak dapat diubah.");
+    if (!confirmed) {
+      return;
     }
-    const summary = OSCE_SCORING.calculateSummary();
-    if (summary.completedCount >= summary.totalStations) {
-      OSCE_SCORING.showStudentResultModal();
+
+    const btn = document.getElementById("btn-complete-station");
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Mengirim...";
     }
-    // 2. Setelah kembali ke koridor (1.4 detik), bergeser/berjalan menuju stasiun berikutnya
-    setTimeout(() => {
-      advanceToNextStation();
-    }, 1400);
+
+    try {
+      if (typeof ExamAPI !== "undefined" && ExamAPI.submitAnswer) {
+        await ExamAPI.submitAnswer(stationNo, selectedDecision);
+      }
+
+      if (!state.stationProgress[idx]) state.stationProgress[idx] = {};
+      state.stationProgress[idx].completed = true;
+      state.stationProgress[idx].submitted = true;
+
+      selectedDecision = null;
+      closeWorkstationModal();
+
+      // Kembalikan peserta & bot teman sekoridor ke koridor
+      exitStationRoomToCorridor();
+      if (typeof peerBotsExitToCorridor === "function") peerBotsExitToCorridor();
+      updateDoorStatusLamps(state.phase, idx);
+
+      const stCode = (typeof STATIONS !== "undefined" && STATIONS[idx] && STATIONS[idx].code) ? STATIONS[idx].code : `S${stationNo}`;
+      const nextSt = (typeof STATIONS !== "undefined" && STATIONS[(idx + 1) % STATIONS.length]) ? STATIONS[(idx + 1) % STATIONS.length].code : "";
+
+      // Tampilkan HANYA pesan 'Jawaban diterima.'
+      showToast("Jawaban diterima.", "success");
+      updateSubtitle(`Tugas ${stCode} selesai. Jawaban diterima. Bersiap rotasi ${nextSt ? `ke ${nextSt}` : "ke stasiun berikutnya"}...`);
+
+      // Lanjut ke stasiun berikutnya sesuai alur yang sudah ada (1.4 detik)
+      setTimeout(() => {
+        advanceToNextStation();
+      }, 1400);
+    } catch (err) {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "Selesaikan Tugas Station Ini ✓";
+      }
+      showToast(err.message || "Gagal mengirim jawaban. Coba lagi.", "error");
+    }
   });
 
   // Voice Announcement Toggle

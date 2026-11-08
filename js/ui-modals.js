@@ -3,15 +3,27 @@
 // =========================================================================
 
 // Modal Petunjuk Pintu
-function openInstructionModal() {
+async function openInstructionModal() {
   playBell("click");
   state.hasReadInstruction = true;
-  const st = STATIONS[state.currentStationIdx];
-  document.getElementById("inst-badge").textContent = `${st.code} • ${st.area.toUpperCase()}`;
-  document.getElementById("inst-title").textContent = st.title;
-  document.getElementById("inst-scenario").textContent = st.scenario;
-  document.getElementById("inst-tasks").innerHTML = st.tasks.map(t => `<li>${t}</li>`).join("");
-  document.getElementById("inst-competencies").textContent = st.competencies;
+  const idx = state.currentStationIdx;
+  const stationNo = idx + 1; // TODO Fase 4: rotasi dinamis per ronde
+  const st = (typeof STATIONS !== "undefined" && STATIONS[idx]) ? STATIONS[idx] : {};
+
+  if (!activeStationServerData && stationNo <= 9 && typeof ExamAPI !== "undefined" && ExamAPI.fetchStation) {
+    try {
+      activeStationServerData = await ExamAPI.fetchStation(stationNo);
+    } catch (e) {
+      // Gunakan fallback lokal sementara jika ada kendala
+    }
+  }
+
+  const data = activeStationServerData || st;
+  document.getElementById("inst-badge").textContent = `${data.code || st.code} • ${(data.area || st.area || "OSCE").toUpperCase()}`;
+  document.getElementById("inst-title").textContent = data.title || st.title || "";
+  document.getElementById("inst-scenario").textContent = data.scenario || st.scenario || "";
+  document.getElementById("inst-tasks").innerHTML = (data.tasks || st.tasks || []).map(t => `<li>${t}</li>`).join("");
+  document.getElementById("inst-competencies").textContent = data.competencies || st.competencies || "";
 
   const doorStatus = document.getElementById("inst-door-status");
   if (state.phase === "prep") {
@@ -89,11 +101,74 @@ function closeMapModal() {
 }
 
 // Modal Lembar Kerja / Workstation
+var selectedDecision = null; // ID opsi jawaban yang dipilih peserta (string opt.id)
 let currentWorkTab = "form";
-let selectedDecision = null; // indeks jawaban yang dipilih peserta pada station aktif
-function openWorkstationModal(tab = "form") {
+let activeStationServerData = null; // Disimpan HANYA di memori modul aktif (tidak ke localStorage)
+
+function updateCompleteButtonState() {
+  const btn = document.getElementById("btn-complete-station");
+  if (!btn) return;
+  const idx = state.currentStationIdx;
+  const stationNo = idx + 1; // TODO Fase 4: rotasi dinamis per ronde
+
+  if (stationNo === 10) {
+    btn.disabled = false;
+    btn.classList.remove("opacity-50", "cursor-not-allowed");
+    btn.textContent = "Selesai Istirahat ✓";
+    return;
+  }
+
+  const isSubmitted = (typeof ExamAPI !== "undefined" && ExamAPI.isStationSubmitted(stationNo)) ||
+                      (state.stationProgress && state.stationProgress[idx] && state.stationProgress[idx].submitted);
+
+  if (isSubmitted) {
+    btn.disabled = true;
+    btn.classList.add("opacity-50", "cursor-not-allowed");
+    btn.textContent = "Jawaban Terkirim ✓";
+    return;
+  }
+
+  if (selectedDecision === null || selectedDecision === undefined || selectedDecision === "") {
+    btn.disabled = true;
+    btn.classList.add("opacity-50", "cursor-not-allowed");
+    btn.textContent = "Selesaikan Tugas Station Ini ✓";
+  } else {
+    btn.disabled = false;
+    btn.classList.remove("opacity-50", "cursor-not-allowed");
+    btn.textContent = "Selesaikan Tugas Station Ini ✓";
+  }
+}
+
+async function openWorkstationModal(tab = "form") {
   playBell("click");
   currentWorkTab = tab;
+  const idx = state.currentStationIdx;
+  const stationNo = idx + 1; // TODO Fase 4: rotasi dinamis per ronde
+
+  if (stationNo === 10) {
+    activeStationServerData = {
+      isRest: true,
+      stationNo: 10,
+      code: "S10",
+      area: "Istirahat",
+      title: "Station 10 - Istirahat",
+      scenario: "Station Istirahat. Silakan manfaatkan waktu untuk rehat sejenak.",
+      decisionQuestion: "Station Istirahat resmi. Silakan manfaatkan waktu untuk rehat sejenak.",
+      options: []
+    };
+  } else {
+    try {
+      if (typeof ExamAPI !== "undefined" && ExamAPI.fetchStation) {
+        activeStationServerData = await ExamAPI.fetchStation(stationNo);
+      }
+    } catch (err) {
+      if (typeof showToast === "function") {
+        showToast(err.message || "Gagal memuat soal stasiun.", "error");
+      }
+      return;
+    }
+  }
+
   renderWorkstationModal();
   const modal = document.getElementById("modal-workstation");
   modal.classList.remove("hidden");
@@ -108,12 +183,17 @@ function closeWorkstationModal() {
 
 function renderWorkstationModal() {
   const idx = state.currentStationIdx;
-  const st = STATIONS[idx];
-  const prog = state.stationProgress[idx] || {};
+  const stationNo = idx + 1; // TODO Fase 4: rotasi dinamis per ronde
+  const st = (typeof STATIONS !== "undefined" && STATIONS[idx]) ? STATIONS[idx] : {};
+  const serverData = activeStationServerData || {};
+  const prog = (state.stationProgress && state.stationProgress[idx]) ? state.stationProgress[idx] : {};
   prog.checklistTicks = prog.checklistTicks || {};
 
-  document.getElementById("workstation-badge").textContent = `${st.code} • ${st.area.toUpperCase()}`;
-  document.getElementById("workstation-title").textContent = st.title;
+  const badgeText = `${serverData.code || st.code || `S${stationNo}`} • ${(serverData.area || st.area || "OSCE").toUpperCase()}`;
+  const titleText = serverData.title || st.title || `Station ${stationNo}`;
+
+  document.getElementById("workstation-badge").textContent = badgeText;
+  document.getElementById("workstation-title").textContent = titleText;
 
   // Highlight active tab button
   ["npc", "lab", "form"].forEach((t) => {
@@ -126,6 +206,21 @@ function renderWorkstationModal() {
   });
 
   const contentDiv = document.getElementById("workstation-tab-content");
+
+  if (stationNo === 10) {
+    contentDiv.innerHTML = `
+      <div class="p-6 rounded-2xl bg-amber-50 border border-amber-200 text-center space-y-2">
+        <div class="text-3xl">☕</div>
+        <div class="font-bold text-base text-amber-950">Station 10 - Istirahat</div>
+        <div class="text-xs text-amber-900 leading-relaxed">
+          Ini adalah stasiun istirahat resmi. Anda dapat memanfaatkan waktu untuk beristirahat sebelum rotasi ke stasiun berikutnya.
+        </div>
+      </div>
+    `;
+    updateCompleteButtonState();
+    return;
+  }
+
   if (currentWorkTab === "npc") {
     if (typeof renderAiNpcTab === "function") {
       renderAiNpcTab(idx, contentDiv);
@@ -136,12 +231,12 @@ function renderWorkstationModal() {
         <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center justify-between">
           <div>
             <div class="font-bold text-amber-900">🔬 Pemeriksaan Alat 3D & Simulasi Laboratorium Interaktif</div>
-            <div class="text-xs text-amber-950 mt-0.5">${st.labObjectTitle}</div>
+            <div class="text-xs text-amber-950 mt-0.5">${serverData.labObjectTitle || st.labObjectTitle || ""}</div>
           </div>
           <span class="px-2.5 py-1 rounded-lg bg-amber-200/80 text-amber-950 font-bold text-[10px]">INTERAKTIF LANGSUNG</span>
         </div>
         <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 font-mono text-xs leading-relaxed text-slate-800">
-          ${st.labData}
+          ${serverData.labData || st.labData || ""}
         </div>
         <div id="workstation-interactive-sim"></div>
       </div>
@@ -150,52 +245,63 @@ function renderWorkstationModal() {
       renderInteractiveLabSimulation(idx, document.getElementById("workstation-interactive-sim"));
     }
   } else {
+    // Tab Form / Keputusan Farmasetis
+    const scenario = serverData.scenario || st.scenario || "";
+    const decisionQ = serverData.decisionQuestion || st.decisionQuestion || "Pertanyaan keputusan klinis belum tersedia.";
+    const options = (serverData.options && serverData.options.length > 0)
+      ? serverData.options
+      : ((st.options || []).map((o, i) => ({ id: String(i), text: o.text })));
+
+    const isSubmitted = (typeof ExamAPI !== "undefined" && ExamAPI.isStationSubmitted(stationNo)) ||
+                        (prog && prog.submitted);
+
     contentDiv.innerHTML = `
       <div class="space-y-3">
         <div id="workstation-form-sim-slot"></div>
-        <!-- Checklist OSCE Berbobot & Item Kritis (Must-Pass) -->
-        <div class="p-3.5 rounded-2xl border border-teal-200 bg-teal-50/40 space-y-2">
-          <div class="flex items-center justify-between">
-            <div class="font-black text-teal-950 text-xs">📋 Checklist Rubrik OSCE Asli (Item Berbobot & Item Kritis):</div>
-            <span class="text-[10px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full">★ = Item Kritis (Wajib Lulus)</span>
+
+        ${scenario ? `
+          <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-1">
+            <div class="font-bold text-slate-800 text-xs">📖 Skenario Kasus:</div>
+            <div class="text-xs text-slate-700 leading-relaxed">${scenario}</div>
           </div>
-          <div class="space-y-1.5">
-            ${(st.checklist || []).map((c) => `
-              <label class="flex items-center justify-between p-2 rounded-xl bg-white border ${c.critical ? 'border-rose-200' : 'border-slate-200'} cursor-pointer hover:border-teal-500">
-                <div class="flex items-center gap-2">
-                  <input type="checkbox" data-cid="${c.id}" class="chk-osce-item accent-teal-600 w-4 h-4" ${prog.checklistTicks[c.id] ? 'checked' : ''} />
-                  <span class="text-xs text-slate-800 font-medium">${c.label}</span>
-                  ${c.critical ? '<span class="px-1.5 py-0.5 rounded bg-rose-600 text-white font-black text-[9px]">★ KRITIS</span>' : ''}
-                </div>
-                <span class="text-[11px] font-mono font-bold text-teal-800">Bobot ${c.weight}%</span>
-              </label>
-            `).join("")}
-          </div>
-        </div>
+        ` : ""}
 
         <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-3">
           <div class="font-bold text-indigo-900 mb-1">Pertanyaan Keputusan Klinis / Farmasetis Akhir:</div>
-          <div class="text-xs text-indigo-950">${st.decisionQuestion}</div>
+          <div class="text-xs text-indigo-950">${decisionQ}</div>
         </div>
-        <div class="space-y-2">
-          ${st.options.map((opt, i) => `
-            <label class="block p-3 rounded-xl border border-slate-200 hover:border-teal-500 cursor-pointer bg-white transition">
-              <input type="radio" name="decision-option" value="${i}" ${selectedDecision === i ? "checked" : ""} onchange="selectedDecision = ${i}" class="mr-2 text-teal-600" />
-              <span class="text-xs text-slate-800">${opt.text}</span>
-            </label>
-          `).join("")}
-        </div>
+
+        ${isSubmitted ? `
+          <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-900 text-xs font-semibold flex items-center gap-2">
+            <span>✓</span> Jawaban telah terkirim dan diterima server. Stasiun ini terkunci.
+          </div>
+        ` : `
+          <div class="space-y-2">
+            ${options.map((opt) => `
+              <label class="block p-3 rounded-xl border border-slate-200 hover:border-teal-500 cursor-pointer bg-white transition">
+                <input type="radio" name="decision-option" value="${opt.id}" ${selectedDecision === opt.id ? "checked" : ""} class="mr-2 text-teal-600" />
+                <span class="text-xs text-slate-800">${opt.text}</span>
+              </label>
+            `).join("")}
+          </div>
+        `}
       </div>
     `;
+
     if (typeof renderInteractiveLabSimulation === "function") {
       renderInteractiveLabSimulation(idx, document.getElementById("workstation-form-sim-slot"));
     }
-    contentDiv.querySelectorAll(".chk-osce-item").forEach((chk) => {
-      chk.addEventListener("change", (e) => {
-        prog.checklistTicks[e.target.dataset.cid] = e.target.checked;
+
+    // Pasang event listener pada setiap radio opsi jawaban
+    contentDiv.querySelectorAll('input[name="decision-option"]').forEach((radio) => {
+      radio.addEventListener("change", (e) => {
+        selectedDecision = e.target.value;
+        updateCompleteButtonState();
       });
     });
   }
+
+  updateCompleteButtonState();
 }
 
 // Modal Blueprint Teknis

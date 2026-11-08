@@ -22,6 +22,7 @@ const ASSETS_TO_CACHE = [
   "./js/network.js",
   "./js/assessor.js",
   "./js/scoring.js",
+  "./js/exam-api.js",
   "./js/ui-modals.js",
   "./js/ux-minimap-tutorial.js",
   "./js/input.js",
