@@ -124,7 +124,7 @@ function updateCompleteButtonState() {
   if (isSubmitted) {
     btn.disabled = true;
     btn.classList.add("opacity-50", "cursor-not-allowed");
-    btn.textContent = "Jawaban Terkirim ✓";
+    btn.textContent = "Jawaban diterima ✓";
     return;
   }
 
@@ -255,6 +255,25 @@ function renderWorkstationModal() {
     const isSubmitted = (typeof ExamAPI !== "undefined" && ExamAPI.isStationSubmitted(stationNo)) ||
                         (prog && prog.submitted);
 
+    if (isSubmitted) {
+      contentDiv.innerHTML = `
+        <div class="space-y-4 py-6 text-center">
+          <div class="w-16 h-16 mx-auto bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center text-3xl font-bold">
+            ✓
+          </div>
+          <div class="space-y-1">
+            <h4 class="text-base font-bold text-slate-800">Jawaban diterima</h4>
+            <p class="text-xs text-slate-500">Stasiun ini telah selesai dikerjakan dan jawaban Anda telah diterima oleh server.</p>
+          </div>
+          <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-900 text-xs font-semibold inline-flex items-center gap-2">
+            <span>🔒</span> Stasiun terkunci.
+          </div>
+        </div>
+      `;
+      updateCompleteButtonState();
+      return;
+    }
+
     contentDiv.innerHTML = `
       <div class="space-y-3">
         <div id="workstation-form-sim-slot"></div>
@@ -271,20 +290,14 @@ function renderWorkstationModal() {
           <div class="text-xs text-indigo-950">${decisionQ}</div>
         </div>
 
-        ${isSubmitted ? `
-          <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-900 text-xs font-semibold flex items-center gap-2">
-            <span>✓</span> Jawaban telah terkirim dan diterima server. Stasiun ini terkunci.
-          </div>
-        ` : `
-          <div class="space-y-2">
-            ${options.map((opt) => `
-              <label class="block p-3 rounded-xl border border-slate-200 hover:border-teal-500 cursor-pointer bg-white transition">
-                <input type="radio" name="decision-option" value="${opt.id}" ${selectedDecision === opt.id ? "checked" : ""} class="mr-2 text-teal-600" />
-                <span class="text-xs text-slate-800">${opt.text}</span>
-              </label>
-            `).join("")}
-          </div>
-        `}
+        <div class="space-y-2">
+          ${options.map((opt) => `
+            <label class="block p-3 rounded-xl border border-slate-200 hover:border-teal-500 cursor-pointer bg-white transition">
+              <input type="radio" name="decision-option" value="${opt.id}" ${selectedDecision === opt.id ? "checked" : ""} class="mr-2 text-teal-600" />
+              <span class="text-xs text-slate-800">${opt.text}</span>
+            </label>
+          `).join("")}
+        </div>
       </div>
     `;
 

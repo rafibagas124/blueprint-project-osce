@@ -1,5 +1,5 @@
 // =========================================================================
-// MODUL API UJIAN RESMI OSCE CENTER 3D (FASE 3D-1)
+// MODUL API UJIAN RESMI OSCE CENTER 3D (FASE 3D-1 & 3E)
 // Fungsi murni untuk berkomunikasi dengan endpoint otoritatif server.
 // Mendukung Browser (window.ExamAPI) dan Node.js (module.exports) untuk unit test.
 // =========================================================================
@@ -83,6 +83,59 @@ async function fetchStation(stationNo, options = {}) {
 }
 
 /**
+ * Mengambil progres stasiun yang sudah disubmit oleh mahasiswa dari server (GET /api/progress).
+ * Respons: { submittedStations: [1, 2, ...] }
+ */
+async function fetchProgress(options = {}) {
+  const token = options.token !== undefined ? options.token : getAuthToken();
+  const fetcher = options.fetchFn || (typeof fetch !== "undefined" ? fetch : null);
+  if (!fetcher) throw new Error("Fetch API tidak tersedia.");
+
+  const headers = { "Content-Type": "application/json" };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  try {
+    const res = await fetcher("/api/progress", {
+      method: "GET",
+      headers
+    });
+
+    if (res.status === 401) {
+      handleAuthFailure();
+      const err = new Error("Sesi telah berakhir. Silakan login kembali.");
+      err.status = 401;
+      throw err;
+    }
+
+    if (res.status === 429) {
+      const err = new Error("Terlalu banyak permintaan progres. Coba lagi sebentar.");
+      err.status = 429;
+      throw err;
+    }
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      const err = new Error(data.error || `Gagal mengambil data progres (HTTP ${res.status}).`);
+      err.status = res.status;
+      throw err;
+    }
+
+    const data = await res.json();
+    if (Array.isArray(data.submittedStations)) {
+      data.submittedStations.forEach((s) => submittedStationsMap.add(Number(s)));
+    }
+    return data;
+  } catch (err) {
+    if (err.status) throw err;
+    const netErr = new Error("Koneksi jaringan terputus. Periksa internet Anda dan coba lagi.");
+    netErr.isNetworkError = true;
+    throw netErr;
+  }
+}
+
+/**
  * Mengirimkan jawaban stasiun ke server (POST /api/submit)
  * Body HANYA { stationNo, optionId }.
  * Idempoten di sisi klien: jika sudah pernah submit sukses, tidak kirim ulang.
@@ -93,6 +146,19 @@ async function submitAnswer(stationNo, optionId, options = {}) {
   // Jika sudah sukses submit di klien, tolak kirim ulang
   if (submittedStationsMap.has(sNo)) {
     return { accepted: true, stationNo: sNo, alreadySubmitted: true };
+  }
+
+  // Jika opsi checkProgress diaktifkan (misal sebelum kirim ulang jawaban yang gagal):
+  if (options.checkProgress === true) {
+    try {
+      const prog = await fetchProgress(options);
+      if (prog && Array.isArray(prog.submittedStations) && prog.submittedStations.includes(sNo)) {
+        submittedStationsMap.add(sNo);
+        return { accepted: true, stationNo: sNo, alreadySubmitted: true };
+      }
+    } catch (e) {
+      // Jika cek progress gagal jaringan, lanjut mencoba submit
+    }
   }
 
   const token = options.token !== undefined ? options.token : getAuthToken();
@@ -142,6 +208,7 @@ async function submitAnswer(stationNo, optionId, options = {}) {
     return data;
   } catch (err) {
     if (err.status) throw err;
+    // JANGAN menandai terkirim jika gagal jaringan
     const netErr = new Error("Koneksi jaringan terputus. Periksa internet Anda dan coba lagi.");
     netErr.isNetworkError = true;
     throw netErr;
@@ -152,14 +219,20 @@ function isStationSubmitted(stationNo) {
   return submittedStationsMap.has(Number(stationNo));
 }
 
+function getSubmittedStations() {
+  return Array.from(submittedStationsMap).sort((a, b) => a - b);
+}
+
 function clearSubmittedStations() {
   submittedStationsMap.clear();
 }
 
 const ExamAPI = {
   fetchStation,
+  fetchProgress,
   submitAnswer,
   isStationSubmitted,
+  getSubmittedStations,
   clearSubmittedStations
 };
 

@@ -64,6 +64,12 @@ const SubmitDecisionSchema = z.object({
   optionId: z.string().min(1).max(64).trim()
 }).strict();
 
+const ProgressQuerySchema = z.object({}).strict();
+
+const ProgressResponseSchema = z.object({
+  submittedStations: z.array(z.number().int().min(1).max(9))
+}).strict();
+
 // --------------------------------------------------- WebSocket Messages ---
 const WsJoinMessageSchema = z.object({
   type: z.literal("join"),
@@ -178,6 +184,8 @@ module.exports = {
   WsGetScoresMessageSchema,
   StationNoParamSchema,
   SubmitDecisionSchema,
+  ProgressQuerySchema,
+  ProgressResponseSchema,
   parseWsMessage
 };
 

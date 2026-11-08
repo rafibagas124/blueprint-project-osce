@@ -271,6 +271,9 @@ async function handleLoginSubmit() {
       }
 
       showToast(`Login berhasil. Selamat datang, ${st.nama} (${st.corridor})!`, "success");
+      if (typeof ExamAPI !== "undefined" && ExamAPI.fetchProgress) {
+        ExamAPI.fetchProgress().catch((e) => console.warn("[Progress] Gagal memuat progres awal:", e.message));
+      }
     } catch (err) {
       showToast("Gagal terhubung ke server autentikasi: " + err.message, "error");
       return;

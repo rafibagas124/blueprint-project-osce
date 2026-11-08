@@ -128,7 +128,27 @@ function wireEvents() {
 
     try {
       if (typeof ExamAPI !== "undefined" && ExamAPI.submitAnswer) {
+        // Sebelum mengirim ulang jawaban yang gagal karena jaringan: cek progress dari server dulu
+        if (state.lastSubmitFailedNetwork && typeof ExamAPI.fetchProgress === "function") {
+          try {
+            await ExamAPI.fetchProgress();
+            if (ExamAPI.isStationSubmitted(stationNo)) {
+              state.lastSubmitFailedNetwork = false;
+              if (!state.stationProgress[idx]) state.stationProgress[idx] = {};
+              state.stationProgress[idx].completed = true;
+              state.stationProgress[idx].submitted = true;
+              selectedDecision = null;
+              closeWorkstationModal();
+              showToast("Jawaban diterima.", "success");
+              return;
+            }
+          } catch (e) {
+            // Cek progress gagal, lanjut mencoba submit
+          }
+        }
+
         await ExamAPI.submitAnswer(stationNo, selectedDecision);
+        state.lastSubmitFailedNetwork = false;
       }
 
       if (!state.stationProgress[idx]) state.stationProgress[idx] = {};
@@ -155,6 +175,9 @@ function wireEvents() {
         advanceToNextStation();
       }, 1400);
     } catch (err) {
+      if (err.isNetworkError) {
+        state.lastSubmitFailedNetwork = true;
+      }
       if (btn) {
         btn.disabled = false;
         btn.textContent = "Selesaikan Tugas Station Ini ✓";

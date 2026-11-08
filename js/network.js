@@ -192,14 +192,15 @@ function handleServerMessage(m) {
       state.wing = m.wing || 0;
       if (m.jwtToken) state.jwtToken = m.jwtToken;
       // Restore saved progress on reconnect (Session Resume)
+      if (typeof ExamAPI !== "undefined" && ExamAPI.fetchProgress) {
+        ExamAPI.fetchProgress().catch((e) => console.warn("[Progress] Gagal memuat progres reconnect:", e.message));
+      }
       if (m.resumedStations && typeof m.resumedStations === "object") {
         Object.keys(m.resumedStations).forEach((sIdx) => {
           const idxNum = parseInt(sIdx, 10);
           if (state.stationProgress[idxNum]) {
             state.stationProgress[idxNum].completed = true;
-            state.stationProgress[idxNum].isCorrect = Boolean(m.resumedStations[sIdx].isCorrect);
-            state.stationProgress[idxNum].score = Number(m.resumedStations[sIdx].score) || 0;
-            state.stationProgress[idxNum].globalRating = m.resumedStations[sIdx].globalRating || "PASS";
+            state.stationProgress[idxNum].submitted = true;
           }
         });
         updateHUD();

@@ -20,7 +20,9 @@ const {
   StudentLoginSchema,
   AssessorLoginSchema,
   StationNoParamSchema,
-  SubmitDecisionSchema
+  SubmitDecisionSchema,
+  ProgressQuerySchema,
+  ProgressResponseSchema
 } = require("./src/schemas/messages");
 const { getStore } = require("./src/store");
 const {
@@ -205,12 +207,19 @@ async function handleWsMessage(client, rawText) {
       if (subs && subs.length > 0) {
         resumedStations = {};
         subs.forEach((s) => {
-          resumedStations[s.stationNo - 1] = {
-            selected: s.selectedOption,
-            isCorrect: s.isCorrect,
-            score: s.finalScore,
-            globalRating: s.isCorrect ? "PASS" : "BORDERLINE"
-          };
+          if (role === "student") {
+            resumedStations[s.stationNo - 1] = {
+              selected: s.selectedOption,
+              submitted: true
+            };
+          } else {
+            resumedStations[s.stationNo - 1] = {
+              selected: s.selectedOption,
+              isCorrect: s.isCorrect,
+              score: s.finalScore,
+              globalRating: s.isCorrect ? "PASS" : "BORDERLINE"
+            };
+          }
         });
       }
     } catch (e) { }
@@ -868,6 +877,61 @@ app.post("/api/submit", async (req, res) => {
   }
 
   return res.json({ accepted: true, stationNo });
+});
+
+// Rate limit ringan per mahasiswa untuk GET /api/progress
+const progressRateLimitMap = new Map(); // nim -> { count, resetAt }
+function checkProgressRateLimit(nim) {
+  const now = Date.now();
+  const rec = progressRateLimitMap.get(nim) || { count: 0, resetAt: now + 60000 };
+  if (now > rec.resetAt) {
+    rec.count = 1;
+    rec.resetAt = now + 60000;
+  } else {
+    rec.count += 1;
+  }
+  progressRateLimitMap.set(nim, rec);
+  return rec.count <= 120; // Ringan: max 120 req per menit
+}
+
+// Endpoint Progress Ujian Mahasiswa (GET /api/progress)
+app.get("/api/progress", async (req, res) => {
+  const authHeader = req.headers.authorization;
+  const token = (authHeader && authHeader.startsWith("Bearer ")) ? authHeader.slice(7) : req.query.token;
+  if (!token) {
+    return res.status(401).json({ error: "Token autentikasi diperlukan." });
+  }
+
+  const claims = verifyJwt(token);
+  if (!claims || claims.role !== "student") {
+    return res.status(403).json({ error: "Hanya mahasiswa aktif yang berwenang mengakses progres ujian." });
+  }
+
+  try {
+    ProgressQuerySchema.parse(req.query);
+  } catch (err) {
+    return res.status(400).json({ error: "Parameter query tidak valid." });
+  }
+
+  if (!checkProgressRateLimit(claims.sub)) {
+    return res.status(429).json({ error: "Terlalu banyak permintaan progres. Harap tunggu sebentar." });
+  }
+
+  const filter = { nim: claims.sub };
+  const subs = await store.listSubmissions(filter);
+  const submittedStations = Array.from(
+    new Set(
+      subs
+        .map((s) => Number(s.stationNo))
+        .filter((n) => Number.isInteger(n) && n >= 1 && n <= 9)
+    )
+  ).sort((a, b) => a - b);
+
+  const payload = ProgressResponseSchema.parse({
+    submittedStations
+  });
+
+  return res.json(payload);
 });
 
 // Static Web Server dengan ALLOWLIST ketat (bukan daftar blokir)
