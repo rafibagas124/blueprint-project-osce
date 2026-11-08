@@ -1,6 +1,7 @@
 // =========================================================================
-// BANK SOAL RESMI OSCE CENTER 3D — SISI SERVER (FASE 3A)
+// BANK SOAL RESMI OSCE CENTER 3D — SISI SERVER (FASE 3A & 3B)
 // =========================================================================
+const crypto = require("crypto");
 
 const QUESTION_BANK_KOR_A = [
   {
@@ -530,11 +531,44 @@ function getAnswerKey(corridorCode, stationNo) {
   };
 }
 
+// =========================================================================
+// PENGACAKAN DETERMINISTIK TANPA STATE (HMAC-SHA256)
+// =========================================================================
+function getDerivedOptionKey() {
+  const secret = process.env.JWT_SECRET || "default_dev_secret_key_antigravity_osce_2026_super_secure";
+  return crypto.createHmac("sha256", secret).update("option-id").digest();
+}
+
+function generateOptionId(nim, corridor, stationNo, originalIndex) {
+  const key = getDerivedOptionKey();
+  const data = `${nim}|${corridor}|${stationNo}|${originalIndex}`;
+  return crypto.createHmac("sha256", key)
+    .update(data)
+    .digest("base64url")
+    .slice(0, 12);
+}
+
+function resolveOptionId(nim, corridor, stationNo, optionId) {
+  const st = getBank(corridor, stationNo);
+  if (!st || !Array.isArray(st.options)) return null;
+  for (let idx = 0; idx < st.options.length; idx++) {
+    const expectedId = generateOptionId(nim, corridor, stationNo, idx);
+    if (expectedId === optionId) {
+      return idx;
+    }
+  }
+  return null;
+}
+
 module.exports = {
   QUESTION_BANK_KOR_A,
   QUESTION_BANK_KOR_B,
   MASTER_QUESTION_BANKS,
   validateQuestionBank,
   getBank,
-  getAnswerKey
+  getAnswerKey,
+  getDerivedOptionKey,
+  generateOptionId,
+  resolveOptionId
 };
+

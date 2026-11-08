@@ -55,6 +55,10 @@ const AssessorLoginSchema = z.object({
   password: z.string().min(1).max(256)
 }).strict();
 
+const StationNoParamSchema = z.object({
+  stationNo: z.coerce.number().int()
+});
+
 // --------------------------------------------------- WebSocket Messages ---
 const WsJoinMessageSchema = z.object({
   type: z.literal("join"),
@@ -167,6 +171,7 @@ module.exports = {
   WsDoorMessageSchema,
   WsUpdateQuizMessageSchema,
   WsGetScoresMessageSchema,
+  StationNoParamSchema,
   parseWsMessage
 };
 

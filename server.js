@@ -18,13 +18,17 @@ const { WebSocketServer, WebSocket } = require("ws");
 const {
   parseWsMessage,
   StudentLoginSchema,
-  AssessorLoginSchema
+  AssessorLoginSchema,
+  StationNoParamSchema
 } = require("./src/schemas/messages");
 const { getStore } = require("./src/store");
 const {
   validateQuestionBank,
   getBank,
-  getAnswerKey
+  getAnswerKey,
+  getDerivedOptionKey,
+  generateOptionId,
+  resolveOptionId
 } = require("./src/data/question-bank");
 
 // Validasi struktur bank soal saat server start
@@ -426,12 +430,41 @@ const loginLimiter = rateLimit({
 
 const LOCKOUT_DURATION_MS = Number(process.env.LOCKOUT_DURATION_MS) || 5 * 60 * 1000;
 const MAX_LOGIN_ATTEMPTS = Number(process.env.MAX_LOGIN_ATTEMPTS) || 5;
+const LOCKOUT_GLOBAL_NIM_LIMIT = Number(process.env.LOCKOUT_GLOBAL_NIM_LIMIT) || 30;
+const LOCKOUT_GLOBAL_NIM_WINDOW_MS = Number(process.env.LOCKOUT_GLOBAL_NIM_WINDOW_MS) || 60 * 60 * 1000;
 
 // loginLockoutMap: `${clientIp}:${identifier}` -> { count, lockedUntil }
 const loginLockoutMap = new Map();
 const nimFailedAttempts = loginLockoutMap; // Alias kompatibilitas
 
+// globalNimLockoutMap: `${identifier}` -> { count, windowStart, permanentLocked }
+const globalNimLockoutMap = new Map();
+
+function getClientIp(req) {
+  if (process.env.TRUST_PROXY === "true") {
+    const xff = req.headers["x-forwarded-for"];
+    if (xff && typeof xff === "string") {
+      return xff.split(",")[0].trim();
+    }
+  }
+  return req.socket?.remoteAddress || "127.0.0.1";
+}
+
 function isIdentifierLocked(clientIp, id) {
+  // 1. Cek batas global per NIM (30 kegagalan/jam -> terkunci sampai dibuka koordinator)
+  if (id) {
+    const globalRec = globalNimLockoutMap.get(id);
+    if (globalRec) {
+      if (globalRec.permanentLocked) {
+        return true;
+      }
+      if (Date.now() - globalRec.windowStart > LOCKOUT_GLOBAL_NIM_WINDOW_MS) {
+        globalNimLockoutMap.delete(id);
+      }
+    }
+  }
+
+  // 2. Cek batas per kombinasi NIM + IP
   const key = id ? `${clientIp}:${id}` : clientIp;
   const record = loginLockoutMap.get(key);
   if (!record) return false;
@@ -444,11 +477,28 @@ function isIdentifierLocked(clientIp, id) {
 }
 
 function recordLoginFailure(clientIp, id) {
+  const now = Date.now();
+
+  // Catat batas global per NIM
+  if (id) {
+    const globalRec = globalNimLockoutMap.get(id) || { count: 0, windowStart: now, permanentLocked: false };
+    if (now - globalRec.windowStart > LOCKOUT_GLOBAL_NIM_WINDOW_MS) {
+      globalRec.count = 0;
+      globalRec.windowStart = now;
+    }
+    globalRec.count += 1;
+    if (globalRec.count >= LOCKOUT_GLOBAL_NIM_LIMIT) {
+      globalRec.permanentLocked = true;
+    }
+    globalNimLockoutMap.set(id, globalRec);
+  }
+
+  // Catat batas per kombinasi NIM + IP
   const key = id ? `${clientIp}:${id}` : clientIp;
   const record = loginLockoutMap.get(key) || { count: 0, lockedUntil: 0 };
   record.count += 1;
   if (record.count >= MAX_LOGIN_ATTEMPTS) {
-    record.lockedUntil = Date.now() + LOCKOUT_DURATION_MS;
+    record.lockedUntil = now + LOCKOUT_DURATION_MS;
   }
   loginLockoutMap.set(key, record);
 }
@@ -465,9 +515,13 @@ function clearLoginFailure(clientIpOrId, maybeId) {
   }
 }
 
-// Buka kunci akun manual oleh koordinator (menghapus lockout untuk identifier dari semua IP)
+// Buka kunci akun manual oleh koordinator (menghapus lockout global dan seluruh IP)
 function unlockAccount(identifier) {
   let count = 0;
+  if (globalNimLockoutMap.has(identifier)) {
+    globalNimLockoutMap.delete(identifier);
+    count++;
+  }
   for (const key of loginLockoutMap.keys()) {
     if (key === identifier || key.endsWith(`:${identifier}`)) {
       loginLockoutMap.delete(key);
@@ -477,7 +531,7 @@ function unlockAccount(identifier) {
   return count;
 }
 
-// Endpoint Buka Kunci Akun Manual (Hanya Koordinator / Asesor)
+// Endpoint Buka Kunci Akun Manual (HANYA Koordinator)
 app.post("/api/auth/unlock-account", async (req, res) => {
   const authHeader = req.headers.authorization;
   const token = (authHeader && authHeader.startsWith("Bearer ")) ? authHeader.slice(7) : null;
@@ -486,8 +540,8 @@ app.post("/api/auth/unlock-account", async (req, res) => {
   }
 
   const claims = verifyJwt(token);
-  if (!claims || (claims.role !== "coordinator" && claims.role !== "assessor")) {
-    return res.status(403).json({ error: "Hanya koordinator/asesor yang berwenang membuka kunci akun." });
+  if (!claims || claims.role !== "coordinator") {
+    return res.status(403).json({ error: "Hanya koordinator yang berwenang membuka kunci akun." });
   }
 
   const { nim, identifier } = req.body || {};
@@ -509,13 +563,13 @@ app.post("/api/auth/login-student", loginLimiter, async (req, res) => {
     return res.status(400).json({ error: "Format request login tidak valid.", details: err.errors });
   }
 
-  const clientIp = req.ip || req.socket?.remoteAddress || "127.0.0.1";
+  const clientIp = getClientIp(req);
   const nim = body.nim.trim();
   const token = body.token.trim();
 
-  // Rate-limit per kombinasi NIM + IP untuk mencegah brute-force tebak token
+  // Rate-limit per kombinasi NIM + IP atau global NIM untuk mencegah brute-force
   if (isIdentifierLocked(clientIp, nim)) {
-    return res.status(429).json({ error: "Terlalu banyak percobaan login gagal untuk NIM ini dari perangkat Anda. Coba lagi dalam 5 menit." });
+    return res.status(429).json({ error: "Terlalu banyak percobaan login gagal untuk akun ini. Hubungi koordinator jika akun terkunci." });
   }
 
   const student = await store.findStudentByNim(nim);
@@ -563,7 +617,7 @@ app.post("/api/auth/login-assessor", loginLimiter, async (req, res) => {
     return res.status(400).json({ error: "Format request login asesor tidak valid." });
   }
 
-  const clientIp = req.ip || req.socket?.remoteAddress || "127.0.0.1";
+  const clientIp = getClientIp(req);
   const username = body.username.trim().toLowerCase();
   const password = body.password;
 
@@ -672,11 +726,144 @@ app.post("/api/ai-npc", async (req, res) => {
   });
 });
 
-// Static Web Server
+// Rate limit per mahasiswa untuk GET /api/station/:stationNo
+const stationRateLimitMap = new Map(); // nim -> { count, resetAt }
+function checkStationRateLimit(nim) {
+  const now = Date.now();
+  const rec = stationRateLimitMap.get(nim) || { count: 0, resetAt: now + 60000 };
+  if (now > rec.resetAt) {
+    rec.count = 1;
+    rec.resetAt = now + 60000;
+  } else {
+    rec.count += 1;
+  }
+  stationRateLimitMap.set(nim, rec);
+  return rec.count <= 60; // Max 60 per menit
+}
+
+// Endpoint Soal Stasiun untuk Mahasiswa (GET /api/station/:stationNo)
+app.get("/api/station/:stationNo", async (req, res) => {
+  const authHeader = req.headers.authorization;
+  const token = (authHeader && authHeader.startsWith("Bearer ")) ? authHeader.slice(7) : req.query.token;
+  if (!token) {
+    return res.status(401).json({ error: "Token autentikasi diperlukan." });
+  }
+
+  const claims = verifyJwt(token);
+  if (!claims || claims.role !== "student") {
+    return res.status(403).json({ error: "Hanya mahasiswa aktif yang berwenang mengakses soal stasiun." });
+  }
+
+  let param;
+  try {
+    param = StationNoParamSchema.parse(req.params);
+  } catch (e) {
+    return res.status(400).json({ error: "Parameter nomor stasiun tidak valid." });
+  }
+
+  const stationNo = param.stationNo;
+  if (stationNo === 10) {
+    return res.status(400).json({ error: "Stasiun 10 adalah stasiun istirahat (tidak ada soal ujian)." });
+  }
+  if (stationNo < 1 || stationNo > 9) {
+    return res.status(400).json({ error: "Nomor stasiun harus berada pada rentang 1-9." });
+  }
+
+  const studentCorridor = claims.corridor;
+  if (req.query.corridor && req.query.corridor !== studentCorridor) {
+    return res.status(403).json({ error: "Akses ditolak: Mahasiswa tidak dapat mengakses soal koridor lain." });
+  }
+
+  if (studentCorridor !== "KOR-A" && studentCorridor !== "KOR-B") {
+    return res.status(403).json({ error: "Koridor mahasiswa tidak valid." });
+  }
+
+  if (!checkStationRateLimit(claims.sub)) {
+    return res.status(429).json({ error: "Terlalu banyak permintaan soal. Harap tunggu sebentar." });
+  }
+
+  const st = getBank(studentCorridor, stationNo);
+  if (!st) {
+    return res.status(404).json({ error: "Soal stasiun tidak ditemukan." });
+  }
+
+  const nim = claims.sub;
+  const sortedOptions = (st.options || []).map((opt, origIdx) => ({
+    id: generateOptionId(nim, studentCorridor, stationNo, origIdx),
+    text: opt.text
+  })).sort((a, b) => a.id.localeCompare(b.id));
+
+  return res.json({
+    ok: true,
+    stationNo: st.stationNo,
+    code: st.code,
+    area: st.area,
+    title: st.title,
+    type: st.type,
+    npcName: st.npcName,
+    npcRole: st.npcRole,
+    labObjectTitle: st.labObjectTitle,
+    doorShortInstruction: st.doorShortInstruction,
+    scenario: st.scenario,
+    tasks: st.tasks,
+    competencies: st.competencies,
+    npcDialogs: st.npcDialogs,
+    labData: st.labData,
+    decisionQuestion: st.decisionQuestion,
+    options: sortedOptions
+  });
+});
+
+// Static Web Server dengan ALLOWLIST ketat (bukan daftar blokir)
+const ALLOWED_STATIC_FILES = new Set([
+  "blueprint.html",
+  "index.html",
+  "manifest.json",
+  "sw.js"
+]);
+const ALLOWED_STATIC_DIRS = ["js", "css", "vendor", "icons"];
+
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "blueprint.html"));
 });
-app.use(express.static(__dirname, { index: "blueprint.html" }));
+
+app.use((req, res, next) => {
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    return next();
+  }
+
+  const decodedPath = decodeURIComponent(req.path.replace(/\0/g, ""));
+  const normalized = path.normalize(decodedPath).replace(/^(\.\.[\/\\])+/, "").replace(/^[\\\/]+/, "");
+
+  if (!normalized || normalized === ".") {
+    return res.sendFile(path.join(__dirname, "blueprint.html"));
+  }
+
+  if (ALLOWED_STATIC_FILES.has(normalized)) {
+    const filePath = path.join(__dirname, normalized);
+    if (fs.existsSync(filePath)) {
+      return res.sendFile(filePath);
+    }
+  }
+
+  const isAllowedDir = ALLOWED_STATIC_DIRS.some((dir) => {
+    return normalized.startsWith(dir + "/") || normalized.startsWith(dir + "\\");
+  });
+
+  if (isAllowedDir) {
+    const resolvedPath = path.resolve(path.join(__dirname, normalized));
+    const inAllowed = ALLOWED_STATIC_DIRS.some((dir) => {
+      const allowedRoot = path.resolve(path.join(__dirname, dir));
+      return resolvedPath.startsWith(allowedRoot + path.sep);
+    });
+
+    if (inAllowed && fs.existsSync(resolvedPath) && fs.statSync(resolvedPath).isFile()) {
+      return res.sendFile(resolvedPath);
+    }
+  }
+
+  return res.status(404).send("Not Found");
+});
 
 // ------------------------------------------------ HTTP & WS Server Setup ---
 const server = http.createServer(app);
@@ -727,11 +914,16 @@ module.exports = {
   verifyJwt,
   loginLockoutMap,
   nimFailedAttempts,
+  globalNimLockoutMap,
+  getClientIp,
   isIdentifierLocked,
   recordLoginFailure,
   clearLoginFailure,
   unlockAccount,
   getBank,
   getAnswerKey,
+  generateOptionId,
+  resolveOptionId,
+  checkStationRateLimit,
   clients
 };
