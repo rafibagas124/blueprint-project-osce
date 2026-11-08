@@ -21,6 +21,14 @@ const {
   AssessorLoginSchema
 } = require("./src/schemas/messages");
 const { getStore } = require("./src/store");
+const {
+  validateQuestionBank,
+  getBank,
+  getAnswerKey
+} = require("./src/data/question-bank");
+
+// Validasi struktur bank soal saat server start
+validateQuestionBank();
 
 // ------------------------------------------------------------- Env Loader ---
 function loadDotEnv() {
@@ -416,31 +424,81 @@ const loginLimiter = rateLimit({
   message: { error: "Terlalu banyak percobaan login dari IP ini. Coba lagi dalam 5 menit." }
 });
 
-const nimFailedAttempts = new Map(); // identifier -> { count, lockedUntil }
+const LOCKOUT_DURATION_MS = Number(process.env.LOCKOUT_DURATION_MS) || 5 * 60 * 1000;
+const MAX_LOGIN_ATTEMPTS = Number(process.env.MAX_LOGIN_ATTEMPTS) || 5;
 
-function isIdentifierLocked(id) {
-  const record = nimFailedAttempts.get(id);
+// loginLockoutMap: `${clientIp}:${identifier}` -> { count, lockedUntil }
+const loginLockoutMap = new Map();
+const nimFailedAttempts = loginLockoutMap; // Alias kompatibilitas
+
+function isIdentifierLocked(clientIp, id) {
+  const key = id ? `${clientIp}:${id}` : clientIp;
+  const record = loginLockoutMap.get(key);
   if (!record) return false;
   if (record.lockedUntil && Date.now() < record.lockedUntil) return true;
   if (record.lockedUntil && Date.now() >= record.lockedUntil) {
-    nimFailedAttempts.delete(id);
+    loginLockoutMap.delete(key);
     return false;
   }
   return false;
 }
 
-function recordLoginFailure(id) {
-  const record = nimFailedAttempts.get(id) || { count: 0, lockedUntil: 0 };
+function recordLoginFailure(clientIp, id) {
+  const key = id ? `${clientIp}:${id}` : clientIp;
+  const record = loginLockoutMap.get(key) || { count: 0, lockedUntil: 0 };
   record.count += 1;
-  if (record.count >= 5) {
-    record.lockedUntil = Date.now() + 5 * 60 * 1000;
+  if (record.count >= MAX_LOGIN_ATTEMPTS) {
+    record.lockedUntil = Date.now() + LOCKOUT_DURATION_MS;
   }
-  nimFailedAttempts.set(id, record);
+  loginLockoutMap.set(key, record);
 }
 
-function clearLoginFailure(id) {
-  nimFailedAttempts.delete(id);
+function clearLoginFailure(clientIpOrId, maybeId) {
+  if (maybeId) {
+    loginLockoutMap.delete(`${clientIpOrId}:${maybeId}`);
+  } else {
+    for (const key of loginLockoutMap.keys()) {
+      if (key === clientIpOrId || key.endsWith(`:${clientIpOrId}`)) {
+        loginLockoutMap.delete(key);
+      }
+    }
+  }
 }
+
+// Buka kunci akun manual oleh koordinator (menghapus lockout untuk identifier dari semua IP)
+function unlockAccount(identifier) {
+  let count = 0;
+  for (const key of loginLockoutMap.keys()) {
+    if (key === identifier || key.endsWith(`:${identifier}`)) {
+      loginLockoutMap.delete(key);
+      count++;
+    }
+  }
+  return count;
+}
+
+// Endpoint Buka Kunci Akun Manual (Hanya Koordinator / Asesor)
+app.post("/api/auth/unlock-account", async (req, res) => {
+  const authHeader = req.headers.authorization;
+  const token = (authHeader && authHeader.startsWith("Bearer ")) ? authHeader.slice(7) : null;
+  if (!token) {
+    return res.status(401).json({ error: "Token autentikasi diperlukan." });
+  }
+
+  const claims = verifyJwt(token);
+  if (!claims || (claims.role !== "coordinator" && claims.role !== "assessor")) {
+    return res.status(403).json({ error: "Hanya koordinator/asesor yang berwenang membuka kunci akun." });
+  }
+
+  const { nim, identifier } = req.body || {};
+  const targetId = (nim || identifier || "").trim();
+  if (!targetId) {
+    return res.status(400).json({ error: "NIM atau username wajib disertakan." });
+  }
+
+  const unlockedCount = unlockAccount(targetId);
+  return res.json({ ok: true, message: `Kunci akun ${targetId} berhasil dibuka.`, unlockedCount });
+});
 
 // Endpoint Login Mahasiswa (NIM + Token Sesi)
 app.post("/api/auth/login-student", loginLimiter, async (req, res) => {
@@ -451,22 +509,23 @@ app.post("/api/auth/login-student", loginLimiter, async (req, res) => {
     return res.status(400).json({ error: "Format request login tidak valid.", details: err.errors });
   }
 
+  const clientIp = req.ip || req.socket?.remoteAddress || "127.0.0.1";
   const nim = body.nim.trim();
   const token = body.token.trim();
 
-  // Rate-limit per NIM untuk mencegah brute-force tebak token
-  if (isIdentifierLocked(nim)) {
-    return res.status(429).json({ error: "Terlalu banyak percobaan login gagal untuk NIM ini. Coba lagi dalam 5 menit." });
+  // Rate-limit per kombinasi NIM + IP untuk mencegah brute-force tebak token
+  if (isIdentifierLocked(clientIp, nim)) {
+    return res.status(429).json({ error: "Terlalu banyak percobaan login gagal untuk NIM ini dari perangkat Anda. Coba lagi dalam 5 menit." });
   }
 
   const student = await store.findStudentByNim(nim);
   if (!student || !student.tokenHash || !bcrypt.compareSync(token, student.tokenHash)) {
-    recordLoginFailure(nim);
+    recordLoginFailure(clientIp, nim);
     // Aturan wajib: Pesan gagal tidak boleh membedakan 'NIM tidak ada' dan 'token salah'
     return res.status(401).json({ error: "NIM atau token ujian tidak valid." });
   }
 
-  clearLoginFailure(nim);
+  clearLoginFailure(clientIp, nim);
 
   // Sign JWT dengan claims otoriter dari data store
   const payload = {
@@ -504,20 +563,21 @@ app.post("/api/auth/login-assessor", loginLimiter, async (req, res) => {
     return res.status(400).json({ error: "Format request login asesor tidak valid." });
   }
 
+  const clientIp = req.ip || req.socket?.remoteAddress || "127.0.0.1";
   const username = body.username.trim().toLowerCase();
   const password = body.password;
 
-  if (isIdentifierLocked(username)) {
-    return res.status(429).json({ error: "Terlalu banyak percobaan login gagal untuk akun ini. Coba lagi dalam 5 menit." });
+  if (isIdentifierLocked(clientIp, username)) {
+    return res.status(429).json({ error: "Terlalu banyak percobaan login gagal untuk akun ini dari perangkat Anda. Coba lagi dalam 5 menit." });
   }
 
   const assessor = await store.findAssessorByUsername(username);
   if (!assessor || !assessor.passwordHash || !bcrypt.compareSync(password, assessor.passwordHash)) {
-    recordLoginFailure(username);
+    recordLoginFailure(clientIp, username);
     return res.status(401).json({ error: "Username atau password asesor tidak valid." });
   }
 
-  clearLoginFailure(username);
+  clearLoginFailure(clientIp, username);
 
   const payload = {
     sub: assessor.username,
@@ -665,7 +725,13 @@ module.exports = {
   store,
   signJwt,
   verifyJwt,
+  loginLockoutMap,
   nimFailedAttempts,
+  isIdentifierLocked,
+  recordLoginFailure,
   clearLoginFailure,
+  unlockAccount,
+  getBank,
+  getAnswerKey,
   clients
 };
