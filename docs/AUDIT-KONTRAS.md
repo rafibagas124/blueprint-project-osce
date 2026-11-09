@@ -757,3 +757,32 @@ Audit memeriksa seluruh elemen teks aktif pada 5 kondisi UI setelah proses login
    - Berdasarkan spesifikasi WCAG 2.2 SC 1.4.6, objek visual 3D (mesh avatar, pencahayaan 3D) tidak termasuk dalam cakupan teks DOM. Namun pencahayaan koridor telah diturunkan dari `intensity 1.3` menjadi `0.68`, dan warna lantai digelapkan dari `#e2e8f0` menjadi `#475569` untuk mencegah silau dan memisahkan avatar jas putih secara terukur.
 2. **Ikon SVG / Dekorasi Non-Teks**:
    - Ikon murni dekoratif memenuhi kriteria WCAG SC 1.4.11 (Non-text Contrast >= 3.0:1).
+
+---
+
+## 3. Pintu Ruang Stasiun Koridor 3D (Tampilan Rumah Sakit Modern & Geometri)
+
+### 3.1 Verifikasi Geometri Kusen vs Wainscot (Pengukuran Box3)
+
+| Parameter | Sebelum (Baseline) | Sesudah (Perbaikan) | Status / Target |
+|---|---|---|---|
+| **Posisi doorGroup (X)** | ±3.50 m (sebidang dinding) | ±3.43 m (geser 0.07 m ke tengah) | Optimal |
+| **Muka Depan Kusen vs Wainscot** | -0.50 cm (terbenam di dalam wainscot) | **+7.00 cm** (menonjol ke koridor) | **Lolos (>= 3 cm)** |
+| **Muka Depan Daun Pintu** | Sebidang (x = ±3.455 m, z-fighting) | **+6.00 cm** di depan wainscot | **Bebas Z-Fighting** |
+| **Ketinggian Daun Pintu** | Terpotong wainscot pada y < 1.08 m | Menjangkau lantai (y: 0.00 s/d 2.37 m) | **Lantai Penuh** |
+| **Integritas station3DAnchors** | 10 stasiun terdaftar | 10 stasiun (nilai identik persis) | **100% Konsisten** |
+
+### 3.2 Rasio Kontras Material Pintu Rumah Sakit Modern
+
+| Komponen Elemen | Warna / Heksadesimal | Luminansi Relatif ($L$) | Bidang Pembanding | Rasio Kontras | Kepatuhan |
+|---|---|---|---|---|---|
+| **Daun Pintu** | Abu-es kehijauan (`#cfe3e0`) | 0.7359 | Wainscot (`#164e63`) | **6.82:1** | **Lolos** (Syarat: $L \le 0.78$ & $\ge 3:1$) |
+| **Kusen Pintu** | Charcoal (`#253243`) | 0.0326 | Dinding Atas (`#7c8c9e`) | **3.78:1** | **Lolos** (Syarat: $\ge 3:1$) |
+| **Kusen Pintu** | Charcoal (`#253243`) | 0.0326 | Daun Pintu (`#cfe3e0`) | **9.73:1** | **Lolos** (Syarat: $\ge 3:1$) |
+| **Aksen Teal** | Deep Teal (`#0f766e`) | 0.1550 | Daun Pintu (`#cfe3e0`) | **4.10:1** | **Lolos** (Syarat: $\ge 3:1$) |
+| **Logam Satin** (Kick Plate, Lever) | Satin Steel (`#64748b`) | 0.1680 | Daun Pintu (`#cfe3e0`) | **3.56:1** | **Lolos** (Syarat: $\ge 3:1$) |
+
+### 3.3 Detail Konstruksi & Optimasi Memori
+- **Geometri & Material Bersama**: Seluruh geometri daun pintu, kusen, pelat bawah (kick plate), pelat dorong, dan gagang tuas dibuat sebagai singleton di luar perulangan, digunakan bersama oleh seluruh 20 stasiun (Koridor A & B) tanpa duplikasi memori.
+- **Bentuk Jendela**: Jendela vertikal tinggi berdimensi $0.22 \times 1.10$ m dengan bingkai tipis menggantikan jendela kecil lama.
+- **Papan Petunjuk & Lampu Status**: Papan akrilik di samping pintu tetap terpisah dengan jarak aman (gap 18 cm) tanpa tumpang tindih; sistem lampu indikator pintu (`stationDoorLamps`) mempertahankan 100% logika aslinya.

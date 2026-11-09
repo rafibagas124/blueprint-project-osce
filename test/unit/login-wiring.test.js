@@ -96,8 +96,8 @@ test("Verifikasi Pengkabelan Event Login, Fallback WebGL, dan Komponen Notifikas
     assert.match(inputJs, /handleLoginSubmit\(\)/);
   });
 
-  await t.test("7. sw.js menggunakan CACHE_NAME 'osce-center-3d-v10'", () => {
-    assert.match(swJs, /const CACHE_NAME\s*=\s*["']osce-center-3d-v10["']/);
+  await t.test("7. sw.js menggunakan CACHE_NAME 'osce-center-3d-v11'", () => {
+    assert.match(swJs, /const CACHE_NAME\s*=\s*["']osce-center-3d-v11["']/);
   });
 
   await t.test("8. .vscode/launch.json memiliki config Browser WebGL aman dengan argumen SwiftShader", () => {

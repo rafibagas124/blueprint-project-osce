@@ -454,6 +454,42 @@ function buildCorridor3D(corridorGroup, isSecondary = false) {
     stationDoorPosterMeshes.length = 0;
   }
 
+  // Geometri & Material Bersama Pintu Rumah Sakit Modern (dibuat sekali di luar loop untuk 20 pintu)
+  // Kusen Charcoal: kontras terhadap dinding 3.78:1 dan terhadap daun 9.73:1
+  const hospitalDoorFrameGeo = new THREE.BoxGeometry(1.42, 2.45, 0.09);
+  const hospitalDoorFrameMat = new THREE.MeshStandardMaterial({ color: 0x253243, roughness: 0.42, metalness: 0.25 });
+
+  // Daun Pintu Abu-es Kehijauan: L = 0.7359 <= 0.78, kontras terhadap wainscot 6.82:1
+  const hospitalDoorLeafGeo = new THREE.BoxGeometry(1.30, 2.37, 0.04);
+  const hospitalDoorLeafMat = new THREE.MeshStandardMaterial({ color: 0xcfe3e0, roughness: 0.38, metalness: 0.05 });
+
+  // Pelat Bawah (Kick Plate) Logam Satin: tinggi 0.25m, kontras terhadap daun 3.56:1
+  const hospitalKickPlateGeo = new THREE.BoxGeometry(1.24, 0.25, 0.006);
+  const hospitalSatinMetalMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.25, metalness: 0.85 });
+
+  // Aksen Garis Teal Gelap: kontras terhadap daun 4.10:1
+  const hospitalTealAccentGeo = new THREE.BoxGeometry(1.24, 0.04, 0.006);
+  const hospitalTealAccentMat = new THREE.MeshStandardMaterial({ color: 0x0f766e, roughness: 0.45, metalness: 0.1 });
+
+  // Jendela Kaca Vertikal Tinggi (0.22 x 1.10 m) + Bingkai Tipis
+  const hospitalWindowFrameGeo = new THREE.BoxGeometry(0.26, 1.14, 0.008);
+  const hospitalWindowFrameMat = new THREE.MeshStandardMaterial({ color: 0x253243, roughness: 0.35, metalness: 0.4 });
+  const hospitalWindowGlassGeo = new THREE.BoxGeometry(0.22, 1.10, 0.008);
+  const hospitalWindowGlassMat = new THREE.MeshStandardMaterial({ color: 0xbae6fd, transparent: true, opacity: 0.55, roughness: 0.1 });
+
+  // Pelat Dorong (Push Plate) Logam Satin
+  const hospitalPushPlateGeo = new THREE.BoxGeometry(0.10, 0.30, 0.006);
+
+  // Gagang Tuas (Lever) Logam Satin: peg poros + batang tuas horizontal
+  const hospitalLeverPegGeo = new THREE.CylinderGeometry(0.012, 0.012, 0.035, 12);
+  const hospitalLeverBarGeo = new THREE.BoxGeometry(0.12, 0.02, 0.015);
+
+  // Base Lampu Indikator Pintu
+  const hospitalLampBaseGeo = new THREE.CylinderGeometry(0.13, 0.13, 0.04, 18);
+  const hospitalLampBaseMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.85, roughness: 0.2 });
+  const hospitalLampDomeGeo = new THREE.SphereGeometry(0.105, 18, 18);
+  const hospitalLampHaloGeo = new THREE.SphereGeometry(0.24, 16, 16);
+
   for (let i = 0; i < 10; i++) {
     const isRightSide = i < 5;
     const numStr = String(i + 1).padStart(2, "0");
@@ -477,60 +513,76 @@ function buildCorridor3D(corridorGroup, isSecondary = false) {
     headerSign.rotation.y = rotY;
     corridorGroup.add(headerSign);
 
-    // 2. Kusen & Daun Pintu Ruangan Station (Kayu Walnut Gelap Kontras Tinggi WCAG AAA)
+    // 2. Kusen & Daun Pintu Ruangan Station (Rumah Sakit Modern, Tanpa Inset Kayu)
     const doorGroup = new THREE.Group();
-    doorGroup.position.set(xWall, 0, zPos);
+    // Geser doorGroup menuju tengah koridor sejauh 0.07 agar kusen menonjol >= 3 cm dari wainscot
+    // dan seluruh daun pintu tampak bebas sampai lantai tanpa z-fighting
+    const xDoor = isRightSide ? xWall - 0.07 : xWall + 0.07;
+    doorGroup.position.set(xDoor, 0, zPos);
     doorGroup.rotation.y = rotY;
 
-    const frameMesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1.42, 2.45, 0.08),
-      new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.5 })
-    );
+    // Kusen Charcoal (tebal 0.09m, z: -0.045 s/d +0.045, menonjol 7cm dari wainscot)
+    const frameMesh = new THREE.Mesh(hospitalDoorFrameGeo, hospitalDoorFrameMat);
     frameMesh.position.set(0, 1.225, 0);
     doorGroup.add(frameMesh);
 
-    const doorMat = new THREE.MeshStandardMaterial({ color: 0x6b4423, roughness: 0.45 });
-    const doorLeaf = new THREE.Mesh(new THREE.BoxGeometry(1.30, 2.35, 0.05), doorMat);
-    doorLeaf.position.set(0, 1.20, 0.02);
+    // Daun Pintu Abu-es Kehijauan (tebal 0.04m, center z: 0.015 -> muka depan z: +0.035)
+    // Tinggi 2.37m, posisi y: 1.185 (mencapai lantai y=0 s/d 2.37m)
+    const doorLeaf = new THREE.Mesh(hospitalDoorLeafGeo, hospitalDoorLeafMat);
+    doorLeaf.position.set(0, 1.185, 0.015);
     doorGroup.add(doorLeaf);
 
-    const panelMat = new THREE.MeshStandardMaterial({ color: 0x4a2e16, roughness: 0.55 });
-    [[0, 1.75], [0, 0.75]].forEach(([px, py]) => {
-      const panel = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.42, 0.03), panelMat);
-      panel.position.set(px, py, 0.04);
-      doorGroup.add(panel);
-    });
+    // Pelat Bawah (Kick Plate) Logam Satin setinggi 0.25m di bagian bawah daun pintu
+    const kickPlate = new THREE.Mesh(hospitalKickPlateGeo, hospitalSatinMetalMat);
+    kickPlate.position.set(0, 0.125, 0.038);
+    doorGroup.add(kickPlate);
 
-    const glassMesh = new THREE.Mesh(
-      new THREE.BoxGeometry(0.38, 0.52, 0.06),
-      new THREE.MeshStandardMaterial({ color: 0xbae6fd, transparent: true, opacity: 0.65 })
-    );
-    glassMesh.position.set(0, 1.55, 0.02);
-    doorGroup.add(glassMesh);
+    // Aksen Garis Teal Gelap Horizontal di bawah gagang pintu
+    const tealAccent = new THREE.Mesh(hospitalTealAccentGeo, hospitalTealAccentMat);
+    tealAccent.position.set(0, 0.92, 0.038);
+    doorGroup.add(tealAccent);
 
-    const handleMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, metalness: 0.9, roughness: 0.15 });
-    const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.12, 8), handleMat);
-    handle.rotation.x = Math.PI / 2;
-    handle.position.set(isRightSide ? -0.52 : 0.52, 1.1, 0.045);
-    doorGroup.add(handle);
+    // Jendela Kaca Vertikal Tinggi (0.22 x 1.10 m) dengan Bingkai Tipis
+    const windowFrame = new THREE.Mesh(hospitalWindowFrameGeo, hospitalWindowFrameMat);
+    windowFrame.position.set(0, 1.55, 0.038);
+    doorGroup.add(windowFrame);
+
+    const windowGlass = new THREE.Mesh(hospitalWindowGlassGeo, hospitalWindowGlassMat);
+    windowGlass.position.set(0, 1.55, 0.039);
+    doorGroup.add(windowGlass);
+
+    // Gagang Tuas (Lever) Logam Satin & Pelat Dorong
+    const pushPlateX = isRightSide ? -0.48 : 0.48;
+    const pushPlate = new THREE.Mesh(hospitalPushPlateGeo, hospitalSatinMetalMat);
+    pushPlate.position.set(pushPlateX, 1.05, 0.038);
+    doorGroup.add(pushPlate);
+
+    // Poros gagang
+    const leverPeg = new THREE.Mesh(hospitalLeverPegGeo, hospitalSatinMetalMat);
+    leverPeg.rotation.x = Math.PI / 2;
+    leverPeg.position.set(pushPlateX, 1.05, 0.052);
+    doorGroup.add(leverPeg);
+
+    // Batang tuas horizontal (mengarah ke tengah pintu)
+    const leverBar = new THREE.Mesh(hospitalLeverBarGeo, hospitalSatinMetalMat);
+    const leverBarX = isRightSide ? pushPlateX + 0.045 : pushPlateX - 0.045;
+    leverBar.position.set(leverBarX, 1.05, 0.072);
+    doorGroup.add(leverBar);
 
     // LAMPU BULAT INDIKATOR PINTU BESAR + HALO CAHAYA HIJAU/MERAH
-    const lampFixtureBase = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.13, 0.13, 0.04, 18),
-      new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.85, roughness: 0.2 })
-    );
+    const lampFixtureBase = new THREE.Mesh(hospitalLampBaseGeo, hospitalLampBaseMat);
     lampFixtureBase.rotation.x = Math.PI / 2;
     lampFixtureBase.position.set(0, 2.62, 0.05);
     doorGroup.add(lampFixtureBase);
 
     const lampDomeMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
-    const lampDome = new THREE.Mesh(new THREE.SphereGeometry(0.105, 18, 18), lampDomeMat);
+    const lampDome = new THREE.Mesh(hospitalLampDomeGeo, lampDomeMat);
     lampDome.position.set(0, 2.62, 0.10);
     doorGroup.add(lampDome);
 
     // Efek Pancaran Cahaya (Glowing Halo Sphere) di sekeliling lampu pintu
     const lampHaloMat = new THREE.MeshBasicMaterial({ color: 0xf87171, transparent: true, opacity: 0.38 });
-    const lampHalo = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 16), lampHaloMat);
+    const lampHalo = new THREE.Mesh(hospitalLampHaloGeo, lampHaloMat);
     lampHalo.position.set(0, 2.62, 0.10);
     doorGroup.add(lampHalo);
 
