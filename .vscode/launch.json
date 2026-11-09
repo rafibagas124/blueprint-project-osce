@@ -2,23 +2,72 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Jalankan OSCE Center 3D (Chrome)",
-      "type": "chrome",
+      "name": "OSCE: Demo (data + akun otomatis)",
+      "type": "node",
       "request": "launch",
-      "file": "${workspaceFolder}/blueprint.html"
+      "program": "${workspaceFolder}/src/scripts/demo.js",
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "npm install",
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "console": "internalConsole",
+      "serverReadyAction": {
+        "pattern": "http://localhost:(\\d+)/blueprint\\.html",
+        "action": "startDebugging",
+        "name": "OSCE: Browser (WebGL aman)"
+      }
     },
     {
-      "name": "Jalankan OSCE Center 3D (Edge)",
-      "type": "msedge",
+      "name": "OSCE: Server saja",
+      "type": "node",
       "request": "launch",
-      "file": "${workspaceFolder}/blueprint.html"
+      "program": "${workspaceFolder}/server.js",
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "npm install",
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "console": "internalConsole",
+      "serverReadyAction": {
+        "pattern": "http://localhost:(\\d+)/blueprint\\.html",
+        "action": "startDebugging",
+        "name": "OSCE: Browser (WebGL aman)"
+      }
     },
     {
-      "name": "Jalankan via Localhost (Port 8080)",
+      "name": "OSCE: Seed mahasiswa DEV",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/scripts/seed-dev.js",
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "npm install",
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "console": "internalConsole"
+    },
+    {
+      "name": "OSCE: Browser (WebGL aman)",
       "type": "chrome",
       "request": "launch",
       "url": "http://localhost:8080/blueprint.html",
-      "webRoot": "${workspaceFolder}"
+      "webRoot": "${workspaceFolder}",
+      "runtimeArgs": [
+        "--ignore-gpu-blocklist",
+        "--enable-unsafe-swiftshader"
+      ]
+    },
+    {
+      "name": "OSCE: Browser Edge (WebGL aman)",
+      "type": "msedge",
+      "request": "launch",
+      "url": "http://localhost:8080/blueprint.html",
+      "webRoot": "${workspaceFolder}",
+      "runtimeArgs": [
+        "--ignore-gpu-blocklist",
+        "--enable-unsafe-swiftshader"
+      ]
     }
   ]
 }

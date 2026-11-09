@@ -142,7 +142,7 @@ function writeCredentialsFile(demoData, port, customDir = null) {
   return outPath;
 }
 
-async function runDemo({ port = process.env.PORT || 3000, startServer = true, customStore = null } = {}) {
+async function runDemo({ port = process.env.PORT || 8080, startServer = true, customStore = null } = {}) {
   const demoData = await prepareDemoData(customStore);
   const outPath = writeCredentialsFile(demoData, port);
 
@@ -161,7 +161,8 @@ async function runDemo({ port = process.env.PORT || 3000, startServer = true, cu
       return reject(err);
     });
 
-    server.listen(port, "0.0.0.0", () => {
+    const host = process.env.HOST || (process.env.NODE_ENV === "production" ? "0.0.0.0" : "127.0.0.1");
+    server.listen(port, host, () => {
       const korA = demoData.students.filter((s) => s.corridor === "KOR-A");
       const korB = demoData.students.filter((s) => s.corridor === "KOR-B");
 
@@ -208,3 +209,4 @@ module.exports = {
   generateRandomStudentToken,
   generateRandomCoordinatorPassword
 };
+

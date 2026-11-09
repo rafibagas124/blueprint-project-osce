@@ -250,12 +250,32 @@ function wireEvents() {
   holdKey("btn-turn-right", "d");
 
   // Form Login: toggle role Mahasiswa (NIM + Token) vs Asesor (Username + Password)
-  document.getElementById("login-select-role").addEventListener("change", (e) => {
-    const isAssessor = (e.target.value === "assessor");
-    const studentSec = document.getElementById("login-student-section");
-    const assessorSec = document.getElementById("login-assessor-section");
-    if (studentSec) studentSec.classList.toggle("hidden", isAssessor);
-    if (assessorSec) assessorSec.classList.toggle("hidden", !isAssessor);
+  const roleSelect = document.getElementById("login-select-role");
+  if (roleSelect) {
+    roleSelect.addEventListener("change", (e) => {
+      if (typeof clearLoginError === "function") clearLoginError();
+      const isAssessor = (e.target.value === "assessor");
+      const studentSec = document.getElementById("login-student-section");
+      const assessorSec = document.getElementById("login-assessor-section");
+      if (studentSec) studentSec.classList.toggle("hidden", isAssessor);
+      if (assessorSec) assessorSec.classList.toggle("hidden", !isAssessor);
+    });
+  }
+
+  // Pasang pembersih error saat mengetik dan dukungan Enter untuk submit
+  ["login-input-nim", "login-input-token", "login-input-assessor-user", "login-input-assessor-pass"].forEach((id) => {
+    const inputEl = document.getElementById(id);
+    if (inputEl) {
+      inputEl.addEventListener("input", () => {
+        if (typeof clearLoginError === "function") clearLoginError();
+      });
+      inputEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          handleLoginSubmit();
+        }
+      });
+    }
   });
   document.getElementById("btn-close-assessor-scores").addEventListener("click", closeAssessorScoresModal);
   document.getElementById("btn-assessor-refresh").addEventListener("click", () => {

@@ -1,0 +1,24 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "npm install",
+      "type": "shell",
+      "command": "npm install --no-audit --no-fund",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared",
+        "clear": false
+      },
+      "detail": "Install dependencies npm secara ringan tanpa membuka panel terminal"
+    },
+    {
+      "type": "npm",
+      "script": "test",
+      "problemMatcher": [],
+      "label": "npm test",
+      "detail": "Jalankan seluruh rangkaian tes otomatis"
+    }
+  ]
+}

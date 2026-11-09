@@ -460,9 +460,30 @@ function renderAssessorScoreTable() {
   });
 }
 
-function downloadAllScoresCsv() {
+async function downloadAllScoresCsv() {
   if (netMode === "ws" && state.jwtToken) {
-    window.open(`/api/scores.csv?token=${encodeURIComponent(state.jwtToken)}`, "_blank");
+    try {
+      const res = await fetch("/api/scores.csv", {
+        headers: {
+          Authorization: `Bearer ${state.jwtToken}`
+        }
+      });
+      if (!res.ok) {
+        if (typeof showToast === "function") showToast("Gagal mengunduh CSV: Akses ditolak.", "error");
+        return;
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "nilai_osce.csv";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      if (typeof showToast === "function") showToast("Gagal mengunduh CSV: " + err.message, "error");
+    }
   } else {
     OSCE_SCORING.exportScoreToCSV();
   }

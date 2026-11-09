@@ -158,14 +158,42 @@ function initThreeJS() {
   camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 100);
   camera.rotation.order = "YXZ";
 
-  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
+  const rendererAttempts = [
+    { mode: "high-performance", opts: { antialias: true, alpha: false, powerPreference: "high-performance" }, shadow: true, maxDpr: 2 },
+    { mode: "fallback-default", opts: { antialias: false, alpha: false }, shadow: false, maxDpr: 1 },
+    { mode: "fallback-low-power", opts: { antialias: false, alpha: false, powerPreference: "low-power" }, shadow: false, maxDpr: 1 }
+  ];
+
+  let selectedAttempt = null;
+  let lastInitError = null;
+
+  for (const attempt of rendererAttempts) {
+    try {
+      renderer = new THREE.WebGLRenderer(attempt.opts);
+      selectedAttempt = attempt;
+      console.info(`[WebGL] mode: ${attempt.mode}`);
+      break;
+    } catch (err) {
+      lastInitError = err;
+      renderer = null;
+    }
+  }
+
+  if (!renderer) {
+    throw (lastInitError || new Error("Semua percobaan inisialisasi WebGL gagal"));
+  }
+
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(selectedAttempt.shadow ? Math.min(window.devicePixelRatio, 2) : 1);
   renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 0.92;
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  if (selectedAttempt.shadow) {
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  } else {
+    renderer.shadowMap.enabled = false;
+  }
   container.innerHTML = "";
   container.appendChild(renderer.domElement);
 
@@ -214,23 +242,68 @@ function initThreeJS() {
 }
 
 // =========================================================================
+// LOGIN ERROR HELPER (Aman XSS, role="alert")
+// =========================================================================
+function showLoginError(message) {
+  const el = document.getElementById("login-error");
+  if (el) {
+    el.textContent = message;
+    el.classList.remove("hidden");
+  }
+}
+
+function clearLoginError() {
+  const el = document.getElementById("login-error");
+  if (el) {
+    el.textContent = "";
+    el.classList.add("hidden");
+  }
+}
+
+if (typeof window !== "undefined") {
+  window.showLoginError = showLoginError;
+  window.clearLoginError = clearLoginError;
+}
+
+// =========================================================================
 // LOGIN & SETUP AVATAR SESUAI GENDER & IDENTITAS RESMI DARI SERVER
 // Mahasiswa: NIM + Token -> Data Nama, Gender, Koridor diambil dari Server Store
 // Asesor: Username + Password -> Autentikasi JWT
 // =========================================================================
 async function handleLoginSubmit() {
+  clearLoginError();
+
+  if (typeof window !== "undefined" && window.__webglReady === false) {
+    const err = window.__threeInitError;
+    const isWebgl = !err || /webgl|context/i.test(err && err.message ? err.message : "");
+    const msg = isWebgl
+      ? "Grafik 3D (WebGL) gagal dimulai. Jalankan aplikasi lewat F5 di VS Code (pilih 'OSCE: Demo') agar terbuka di Chrome bersih, atau coba Microsoft Edge. Alternatif: aktifkan akselerasi hardware di pengaturan browser (chrome://settings/system)."
+      : "Terjadi kesalahan saat memuat dunia 3D: " + (err && err.message ? err.message : "Error") + ". Buka Console (F12) untuk detail.";
+    showLoginError(msg);
+    return;
+  }
+
   const roleInput = document.getElementById("login-select-role").value;
+  const btnSubmit = document.getElementById("btn-login-submit");
+  const originalBtnText = btnSubmit ? btnSubmit.textContent : "Masuk ke Simulasi Ujian OSCE →";
 
   if (roleInput === "student") {
     const nimInput = document.getElementById("login-input-nim").value.trim();
     const tokenInput = document.getElementById("login-input-token").value.trim();
 
     if (!nimInput || !tokenInput) {
-      showToast("Harap masukkan NIM dan Token Ujian!", "warning");
+      const errMsg = "Harap masukkan NIM dan Token Ujian!";
+      showLoginError(errMsg);
+      showToast(errMsg, "warning");
       return;
     }
 
     try {
+      if (btnSubmit) {
+        btnSubmit.disabled = true;
+        btnSubmit.textContent = "Memproses...";
+      }
+
       const res = await fetch("/api/auth/login-student", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -238,7 +311,9 @@ async function handleLoginSubmit() {
       });
       const data = await res.json();
       if (!res.ok) {
-        showToast(data.error || "NIM atau token ujian tidak valid.", "error");
+        const errMsg = data.error || "NIM atau token ujian tidak valid.";
+        showLoginError(errMsg);
+        showToast(errMsg, "error");
         return;
       }
 
@@ -275,8 +350,15 @@ async function handleLoginSubmit() {
         ExamAPI.fetchProgress().catch((e) => console.warn("[Progress] Gagal memuat progres awal:", e.message));
       }
     } catch (err) {
-      showToast("Gagal terhubung ke server autentikasi: " + err.message, "error");
+      const netErrMsg = "Tidak bisa terhubung ke server. Pastikan server sudah berjalan (F5 di VS Code) dan alamatnya http://localhost:8080.";
+      showLoginError(netErrMsg);
+      showToast(netErrMsg, "error");
       return;
+    } finally {
+      if (btnSubmit) {
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = originalBtnText;
+      }
     }
   } else {
     // Role: Assessor
@@ -284,11 +366,18 @@ async function handleLoginSubmit() {
     const passInput = document.getElementById("login-input-assessor-pass").value;
 
     if (!userInput || !passInput) {
-      showToast("Harap masukkan Username dan Password Asesor!", "warning");
+      const errMsg = "Harap masukkan Username dan Password Asesor!";
+      showLoginError(errMsg);
+      showToast(errMsg, "warning");
       return;
     }
 
     try {
+      if (btnSubmit) {
+        btnSubmit.disabled = true;
+        btnSubmit.textContent = "Memproses...";
+      }
+
       const res = await fetch("/api/auth/login-assessor", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -296,7 +385,9 @@ async function handleLoginSubmit() {
       });
       const data = await res.json();
       if (!res.ok) {
-        showToast(data.error || "Username atau password asesor salah.", "error");
+        const errMsg = data.error || "Username atau password asesor salah.";
+        showLoginError(errMsg);
+        showToast(errMsg, "error");
         return;
       }
 
@@ -312,8 +403,15 @@ async function handleLoginSubmit() {
 
       showToast(`Selamat datang, ${data.user.nama}! Panel Asesor aktif.`, "success");
     } catch (err) {
-      showToast("Gagal terhubung ke server autentikasi: " + err.message, "error");
+      const netErrMsg = "Tidak bisa terhubung ke server. Pastikan server sudah berjalan (F5 di VS Code) dan alamatnya http://localhost:8080.";
+      showLoginError(netErrMsg);
+      showToast(netErrMsg, "error");
       return;
+    } finally {
+      if (btnSubmit) {
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = originalBtnText;
+      }
     }
   }
 
@@ -528,6 +626,12 @@ function toggleCameraView() {
   if (localAvatar) {
     localAvatar.root.visible = (state.cameraMode === "third");
   }
+}
+
+// Offset sumbu-X sayap koridor aktif (Koridor A = 0, Koridor B = WING_DX)
+function wingOffsetX() { return state.wing === 1 ? WING_DX : 0; }
+if (typeof window !== "undefined") {
+  window.wingOffsetX = wingOffsetX;
 }
 
 // 3D Screen Projection untuk penanda tombol
@@ -844,11 +948,31 @@ function animate() {
 
 // Window Onload Entrypoint
 window.onload = function () {
-  initThreeJS();
-  wireEvents();
-  if (typeof initUxPolishSystem === "function") initUxPolishSystem();
-  if (!animFrameId) {
-    animate();
+  try {
+    wireEvents();
+  } catch (err) {
+    console.error("[Init] Gagal memasang event listener:", err);
+  }
+
+  try {
+    initThreeJS();
+    window.__webglReady = true;
+  } catch (err) {
+    console.error("[Init] Three.js / WebGL gagal:", err);
+    window.__webglReady = false;
+    window.__threeInitError = err;
+    const isWebgl = /webgl|context/i.test(err && err.message ? err.message : "");
+    const msg = isWebgl
+      ? "Grafik 3D (WebGL) gagal dimulai. Jalankan aplikasi lewat F5 di VS Code (pilih 'OSCE: Demo') agar terbuka di Chrome bersih, atau coba Microsoft Edge. Alternatif: aktifkan akselerasi hardware di pengaturan browser (chrome://settings/system)."
+      : "Terjadi kesalahan saat memuat dunia 3D: " + (err && err.message ? err.message : "Error") + ". Buka Console (F12) untuk detail.";
+    showLoginError(msg);
+  }
+
+  if (window.__webglReady && typeof renderer !== "undefined" && renderer) {
+    if (typeof initUxPolishSystem === "function") initUxPolishSystem();
+    if (!animFrameId) {
+      animate();
+    }
   }
 };
 

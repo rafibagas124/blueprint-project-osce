@@ -60,6 +60,7 @@ function loadDotEnv() {
 loadDotEnv();
 
 const PORT = parseInt(process.env.PORT || "8080", 10);
+const DEFAULT_HOST = process.env.HOST || (process.env.NODE_ENV === "production" ? "0.0.0.0" : "127.0.0.1");
 const ROOM_CAPACITY = parseInt(process.env.ROOM_CAPACITY || "20", 10);
 
 // Aturan wajib: di production, server menolak start jika JWT_SECRET < 32 karakter
@@ -615,12 +616,12 @@ app.post("/api/auth/login-assessor", loginLimiter, async (req, res) => {
   });
 });
 
-// Endpoint CSV Nilai Resmi Asesor (Dilindungi JWT Asesor/Koordinator)
+// Endpoint CSV Nilai Resmi Asesor (Dilindungi JWT Asesor/Koordinator via Authorization Header)
 app.get("/api/scores.csv", async (req, res) => {
   const authHeader = req.headers.authorization;
   const token = (authHeader && authHeader.startsWith("Bearer "))
     ? authHeader.slice(7)
-    : req.query.token;
+    : null;
 
   if (!token) {
     return res.status(401).send("Token autentikasi asesor diperlukan.");
@@ -1015,9 +1016,10 @@ const heartbeatInterval = setInterval(() => {
 heartbeatInterval.unref();
 
 if (require.main === module) {
-  server.listen(PORT, "0.0.0.0", () => {
+  server.listen(PORT, DEFAULT_HOST, () => {
     console.log("=======================================================");
     console.log(` OSCE Center 3D Server (ws library) -> http://localhost:${PORT}/blueprint.html`);
+    console.log(` Host: ${DEFAULT_HOST} • Port: ${PORT}`);
     console.log(` Kapasitas room: ${ROOM_CAPACITY} peserta • Sync: ${1000 / FLUSH_MS} Hz`);
     console.log(` Driver Store: ${process.env.STORE_DRIVER || "file"}`);
     console.log(` Mode Autentikasi: JWT Sesi Mahasiswa + Bcrypt Login Asesor`);

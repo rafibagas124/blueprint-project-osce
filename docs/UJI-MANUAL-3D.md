@@ -24,7 +24,7 @@ Dokumen ini berisi panduan pengujian manual melalui peramban web (browser) untuk
 ## Langkah-Langkah Pengujian Manual
 
 1. **Akses Halaman Ujian**:
-   - Buka `http://localhost:3000/blueprint.html`.
+   - Buka `http://localhost:8080/blueprint.html`.
    - Pastikan tab Network memuat aset dengan status `200` (termasuk `js/exam-api.js`).
 
 2. **Login Mahasiswa**:
