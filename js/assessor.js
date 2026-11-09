@@ -191,21 +191,21 @@ function updateAssessorHUD() {
       </div>
 
       <button id="btn-save-assessor-score" type="button"
-        class="w-full py-1.5 px-3 bg-amber-600 hover:bg-amber-500 text-white rounded-lg font-bold text-[11px] transition shadow">
+        class="w-full py-1.5 px-3 bg-amber-800 hover:bg-amber-900 text-white rounded-lg font-bold text-[11px] transition shadow">
         ✓ Simpan Nilai & Global Rating
       </button>
 
       <!-- Kontrol Pintu & 3D Replay Bukti Ujian -->
       <div class="grid grid-cols-2 gap-1.5">
-        <button id="btn-doors-open" type="button" class="py-1.5 px-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg font-bold text-[10px]">🟢 Buka Pintu</button>
-        <button id="btn-doors-lock" type="button" class="py-1.5 px-2 bg-rose-700 hover:bg-rose-600 text-white rounded-lg font-bold text-[10px]">🔴 Kunci Pintu</button>
+        <button id="btn-doors-open" type="button" class="py-1.5 px-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg font-bold text-[10px]">🟢 Buka Pintu</button>
+        <button id="btn-doors-lock" type="button" class="py-1.5 px-2 bg-rose-800 hover:bg-rose-900 text-white rounded-lg font-bold text-[10px]">🔴 Kunci Pintu</button>
       </div>
 
       <div class="grid grid-cols-2 gap-1.5">
-        <button id="btn-assessor-replay" type="button" class="py-1.5 px-2 ${isReplaying3D ? 'bg-rose-600' : 'bg-teal-700 hover:bg-teal-600'} text-white rounded-lg font-bold text-[10px]">
+        <button id="btn-assessor-replay" type="button" class="py-1.5 px-2 ${isReplaying3D ? 'bg-rose-800' : 'bg-teal-800 hover:bg-teal-900'} text-white rounded-lg font-bold text-[10px]">
           ${isReplaying3D ? '⏹ Stop Replay' : '▶ 3D Replay Log'}
         </button>
-        <button id="btn-open-assessor-scores" type="button" class="py-1.5 px-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold text-[10px]">
+        <button id="btn-open-assessor-scores" type="button" class="py-1.5 px-2 bg-indigo-800 hover:bg-indigo-900 text-white rounded-lg font-bold text-[10px]">
           📋 Analitik & Nilai
         </button>
       </div>
@@ -218,14 +218,14 @@ function updateAssessorHUD() {
         </div>
         <div id="assessor-live-feed" class="max-h-24 overflow-y-auto custom-scroll space-y-1 text-[10px]">
           ${liveGradingFeed.length === 0
-      ? `<div class="text-slate-400 italic text-[10px]">Menunggu mahasiswa menyelesaikan tugas stasiun...</div>`
+      ? `<div class="text-slate-300 italic text-[10px]">Menunggu mahasiswa menyelesaikan tugas stasiun...</div>`
       : liveGradingFeed.slice(0, 8).map((f) => `
               <div class="p-1.5 rounded bg-slate-900 border ${(f.passed ?? f.isCorrect) ? 'border-emerald-500/40' : 'border-rose-500/40'} flex items-center justify-between gap-1">
                 <div class="truncate">
                   <span class="font-bold text-white">${f.name}</span>
                   <span class="text-slate-300">• S0${f.stationIdx + 1}→S0${f.nextStationIdx + 1}</span>
                 </div>
-                <span class="px-1.5 py-0.5 rounded font-black shrink-0 ${(f.passed ?? f.isCorrect) ? 'bg-emerald-700 text-white' : 'bg-rose-700 text-white'}">
+                <span class="px-1.5 py-0.5 rounded font-black shrink-0 ${(f.passed ?? f.isCorrect) ? 'bg-emerald-800 text-white' : 'bg-rose-800 text-white'}">
                   ${(f.passed ?? f.isCorrect) ? 'BENAR' : 'SALAH'} (${f.score})
                 </span>
               </div>
@@ -428,21 +428,21 @@ function renderAssessorScoreTable() {
           <td class="p-2 font-semibold">${r.name}</td>
           <td class="p-2 text-center">${r.room ?? "-"}</td>
           <td class="p-2 text-center font-bold">${Number(idx) + 1}</td>
-          <td class="p-2 text-center font-black ${isPass ? "text-emerald-700" : "text-rose-600"}">${s.globalRating || (isPass ? "PASS" : "BORDERLINE")}</td>
+          <td class="p-2 text-center font-black ${isPass ? "text-emerald-950 font-black" : "text-rose-900 font-black"}">${s.globalRating || (isPass ? "PASS" : "BORDERLINE")}</td>
           <td class="p-2 text-center font-bold">${s.score}</td>
           <td class="p-2 text-center">
             <input type="number" min="0" max="100" value="${s.assessorScore ?? ""}" data-nim="${r.nim}" data-idx="${idx}"
               class="w-14 px-1 py-0.5 border border-slate-300 rounded text-center asr-input" />
           </td>
           <td class="p-2 text-center">
-            <button type="button" data-nim="${r.nim}" data-idx="${idx}" class="asr-save px-2 py-0.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded font-bold">Simpan</button>
+            <button type="button" data-nim="${r.nim}" data-idx="${idx}" class="asr-save px-2 py-0.5 bg-indigo-800 hover:bg-indigo-900 text-white rounded font-bold">Simpan</button>
           </td>
         </tr>`);
     });
   });
 
   tbody.innerHTML = rows.length ? rows.join("") :
-    `<tr><td colspan="8" class="p-4 text-center text-slate-500 text-xs">Belum ada peserta yang menyelesaikan station.</td></tr>`;
+    `<tr><td colspan="8" class="p-4 text-center text-slate-600 font-medium text-xs">Belum ada peserta yang menyelesaikan station.</td></tr>`;
 
   tbody.querySelectorAll(".asr-save").forEach((btn) => {
     btn.addEventListener("click", () => {

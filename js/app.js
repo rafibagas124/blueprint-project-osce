@@ -152,8 +152,8 @@ function getClientOffset(scale = 0.42) {
 function initThreeJS() {
   const container = document.getElementById("canvas-container");
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x94a3b8);
-  scene.fog = new THREE.FogExp2(0x94a3b8, 0.022);
+  scene.background = new THREE.Color(0x1e293b);
+  scene.fog = new THREE.FogExp2(0x1e293b, 0.022);
 
   camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 100);
   camera.rotation.order = "YXZ";
@@ -187,7 +187,7 @@ function initThreeJS() {
   renderer.setPixelRatio(selectedAttempt.shadow ? Math.min(window.devicePixelRatio, 2) : 1);
   renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 0.92;
+  renderer.toneMappingExposure = 0.82;
   if (selectedAttempt.shadow) {
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -201,16 +201,16 @@ function initThreeJS() {
     scene.environment = createProceduralHDRIEnvironment(renderer);
   }
 
-  const ambient = new THREE.AmbientLight(0xfff8ef, 0.68);
+  const ambient = new THREE.AmbientLight(0xfff8ef, 0.45);
   scene.add(ambient);
 
-  const dirLight = new THREE.DirectionalLight(0xfff5e0, 0.62);
+  const dirLight = new THREE.DirectionalLight(0xfff5e0, 0.48);
   dirLight.position.set(4, 10, 8);
   dirLight.castShadow = true;
   scene.add(dirLight);
 
   // Cahaya biru lembut dari atas (simulasi lampu TL klinik)
-  const fillLight = new THREE.DirectionalLight(0xe8f4fd, 0.28);
+  const fillLight = new THREE.DirectionalLight(0xe8f4fd, 0.20);
   fillLight.position.set(-3, 8, -5);
   scene.add(fillLight);
 
@@ -466,7 +466,7 @@ async function handleLoginSubmit() {
   const roleBadge = document.getElementById("hud-mode-badge");
   if (roleBadge) {
     roleBadge.textContent = (roleInput === "assessor") ? "Mode Asesor Penguji" : "Kandidat Peserta";
-    roleBadge.className = (roleInput === "assessor") ? "text-amber-600 font-bold" : "text-teal-700 font-bold";
+    roleBadge.className = (roleInput === "assessor") ? "text-amber-900 font-black" : "text-teal-950 font-black";
   }
 
   playBell("chime");

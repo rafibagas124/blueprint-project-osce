@@ -255,17 +255,17 @@ function applyGraphicsQualityPreset(preset) {
   if (preset === "low") {
     renderer.setPixelRatio(1.0);
     renderer.shadowMap.enabled = false;
-    scene.fog = new THREE.FogExp2(0xd4dce8, 0.035);
+    scene.fog = new THREE.FogExp2(0x1e293b, 0.035);
     showToast("Kualitas Grafis: RENDAH (Optimal untuk HP RAM 2-4GB / Hemat Baterai).", "info");
   } else if (preset === "medium") {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     renderer.shadowMap.enabled = true;
-    scene.fog = new THREE.FogExp2(0xd4dce8, 0.028);
+    scene.fog = new THREE.FogExp2(0x1e293b, 0.028);
     showToast("Kualitas Grafis: SEDANG (Seimbang 60 FPS).", "info");
   } else {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2.0));
     renderer.shadowMap.enabled = true;
-    scene.fog = new THREE.FogExp2(0xd4dce8, 0.022);
+    scene.fog = new THREE.FogExp2(0x1e293b, 0.022);
     showToast("Kualitas Grafis: TINGGI (PBR + ACES Tone Mapping + HDRI + Shadow).", "success");
   }
 }
@@ -288,17 +288,17 @@ function showOnboardingTutorialOverlay(force = false) {
     <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-teal-300 space-y-4">
       <div class="flex items-center justify-between border-b border-slate-200 pb-3">
         <div class="flex items-center gap-2">
-          <span class="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold">🩺</span>
+          <span class="w-8 h-8 rounded-xl bg-teal-800 text-white flex items-center justify-center font-bold">🩺</span>
           <h3 class="font-black text-base text-slate-900">${t("tutorial_title")}</h3>
         </div>
-        <button id="btn-close-tut" type="button" class="text-slate-400 hover:text-slate-700 font-bold">✕</button>
+        <button id="btn-close-tut" type="button" class="text-slate-600 hover:text-slate-900 font-bold">✕</button>
       </div>
-      <div class="space-y-2.5 text-xs text-slate-700 leading-relaxed">
-        <div class="p-3 rounded-xl bg-rose-50 border border-rose-200">🔴 <strong>Tahap 1:</strong> ${t("tutorial_step1")}</div>
-        <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-200">🟢 <strong>Tahap 2:</strong> ${t("tutorial_step2")}</div>
-        <div class="p-3 rounded-xl bg-teal-50 border border-teal-200">🔬 <strong>Tahap 3:</strong> ${t("tutorial_step3")}</div>
+      <div class="space-y-2.5 text-xs text-slate-900 leading-relaxed">
+        <div class="p-3 rounded-xl bg-rose-50 border border-rose-300 text-rose-950 font-medium">🔴 <strong>Tahap 1:</strong> ${t("tutorial_step1")}</div>
+        <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-950 font-medium">🟢 <strong>Tahap 2:</strong> ${t("tutorial_step2")}</div>
+        <div class="p-3 rounded-xl bg-teal-50 border border-teal-300 text-teal-950 font-medium">🔬 <strong>Tahap 3:</strong> ${t("tutorial_step3")}</div>
       </div>
-      <button id="btn-start-tut" type="button" class="w-full py-2.5 rounded-xl bg-teal-700 hover:bg-teal-600 text-white font-extrabold text-xs shadow-lg">
+      <button id="btn-start-tut" type="button" class="w-full py-2.5 rounded-xl bg-teal-800 hover:bg-teal-900 text-white font-extrabold text-xs shadow-lg">
         Mengerti, Mulai Simulasi →
       </button>
     </div>

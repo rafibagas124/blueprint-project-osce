@@ -190,7 +190,7 @@ function renderAiNpcTab(stationIdx, containerEl) {
       <!-- Header Persona, Emosi & Skor Anamnesis -->
       <div class="bg-teal-950 text-white rounded-2xl p-3.5 border border-teal-500/40 flex flex-wrap items-center justify-between gap-2">
         <div class="flex items-center gap-2.5">
-          <div class="w-10 h-10 rounded-2xl bg-teal-600 flex items-center justify-center text-lg shadow">🩺</div>
+          <div class="w-10 h-10 rounded-2xl bg-teal-800 text-white flex items-center justify-center text-lg shadow">🩺</div>
           <div>
             <div class="font-black text-xs sm:text-sm flex items-center gap-2">
               <span>${st.npcName}</span>
@@ -208,7 +208,7 @@ function renderAiNpcTab(stationIdx, containerEl) {
       <!-- Tombol Pertanyaan Cepat + Petunjuk Fakta Tersembunyi -->
       <div class="flex flex-wrap gap-1.5">
         ${(st.npcDialogs || []).map((d, i) => `
-          <button type="button" data-q="${d.q.replace(/"/g, '&quot;')}" class="btn-quick-npc px-2.5 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-900 border border-teal-200 text-[11px] font-semibold transition">
+          <button type="button" data-q="${d.q.replace(/"/g, '&quot;')}" class="btn-quick-npc px-2.5 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-950 border border-teal-300 text-[11px] font-bold transition">
             💬 "${d.q}"
           </button>
         `).join("")}
@@ -218,8 +218,8 @@ function renderAiNpcTab(stationIdx, containerEl) {
       <div id="ai-npc-chat-box" class="bg-slate-50 border border-slate-200 rounded-2xl p-3 h-48 overflow-y-auto custom-scroll space-y-2">
         ${session.messages.map((m) => `
           <div class="flex ${m.role === 'student' ? 'justify-end' : 'justify-start'}">
-            <div class="max-w-[85%] rounded-2xl px-3.5 py-2 text-xs leading-relaxed ${m.role === 'student' ? 'bg-teal-700 text-white' : 'bg-white border border-slate-200 text-slate-800 shadow-sm'}">
-              <div class="font-bold text-[10px] ${m.role === 'student' ? 'text-teal-200' : 'text-teal-700'} mb-0.5">
+            <div class="max-w-[85%] rounded-2xl px-3.5 py-2 text-xs leading-relaxed ${m.role === 'student' ? 'bg-teal-800 text-white' : 'bg-white border border-slate-300 text-slate-900 shadow-sm'}">
+              <div class="font-bold text-[10px] ${m.role === 'student' ? 'text-teal-200' : 'text-teal-950'} mb-0.5">
                 ${m.role === 'student' ? state.userProfile.name : st.npcName} • ${m.time}
               </div>
               <div>${m.text}</div>
@@ -230,12 +230,12 @@ function renderAiNpcTab(stationIdx, containerEl) {
 
       <!-- Input Bebas (Teks + Mikrofon Suara STT) -->
       <div class="flex items-center gap-2">
-        <button id="btn-npc-mic" type="button" class="px-3 py-2.5 rounded-xl ${isListeningSTT ? 'bg-rose-600 text-white animate-pulse' : 'bg-slate-800 hover:bg-slate-700 text-white'} font-bold text-xs flex items-center gap-1.5 shadow" title="Bicara via Mikrofon (Speech-to-Text)">
+        <button id="btn-npc-mic" type="button" class="px-3 py-2.5 rounded-xl ${isListeningSTT ? 'bg-rose-800 text-white animate-pulse' : 'bg-slate-900 hover:bg-slate-800 text-white'} font-bold text-xs flex items-center gap-1.5 shadow" title="Bicara via Mikrofon (Speech-to-Text)">
           <span>🎙️</span>
           <span class="hidden sm:inline">${isListeningSTT ? 'Mendengarkan...' : 'Bicara'}</span>
         </button>
         <input id="input-npc-chat" type="text" placeholder="Ketik pertanyaan anamnesis / komunikasi SBAR / WWHAM bebas di sini..." class="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-teal-500 focus:outline-none" />
-        <button id="btn-npc-send" type="button" class="px-4 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-600 text-white font-bold text-xs shadow">
+        <button id="btn-npc-send" type="button" class="px-4 py-2.5 rounded-xl bg-teal-800 hover:bg-teal-900 text-white font-bold text-xs shadow">
           Kirim →
         </button>
       </div>

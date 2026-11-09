@@ -57,7 +57,7 @@ function renderInteractiveLabSimulation(stationIdx, containerEl) {
       <div class="p-4 rounded-2xl border-2 ${isOptimal ? 'border-emerald-400 bg-emerald-50/50' : 'border-teal-200 bg-white'} space-y-3">
         <div class="flex items-center justify-between">
           <div class="font-black text-slate-900 text-xs sm:text-sm">🧪 Simulator Formulasi HLB Emulsi (Total Surfaktan = 5.0 g)</div>
-          <span class="px-2.5 py-1 rounded-full text-[11px] font-black ${isOptimal ? 'bg-emerald-600 text-white' : 'bg-amber-100 text-amber-900'}">
+          <span class="px-2.5 py-1 rounded-full text-[11px] font-black ${isOptimal ? 'bg-emerald-800 text-white' : 'bg-amber-100 text-amber-950 font-bold'}">
             ${isOptimal ? '✓ HLB TARGET TERCAPAI (STABIL)' : '⚠ BELUM SESUAI TARGET (CREAMING)'}
           </span>
         </div>
@@ -65,14 +65,14 @@ function renderInteractiveLabSimulation(stationIdx, containerEl) {
         <input id="sim-st1-slider" type="range" min="0" max="100" step="1" value="${tweenPct}" class="w-full accent-teal-600 cursor-pointer h-2.5 bg-slate-200 rounded-lg" />
         <div class="grid grid-cols-3 gap-2 text-center">
           <div class="p-2.5 rounded-xl bg-teal-50 border border-teal-200">
-            <div class="text-[10px] font-bold text-teal-700">TWEEN 80 (HLB 15.0)</div>
+            <div class="text-[10px] font-bold text-teal-950">TWEEN 80 (HLB 15.0)</div>
             <div id="sim-st1-tween" class="text-sm font-black text-teal-950">${tweenPct}% (${tweenG} g)</div>
           </div>
           <div class="p-2.5 rounded-xl bg-amber-50 border border-amber-200">
-            <div class="text-[10px] font-bold text-amber-800">SPAN 80 (HLB 4.3)</div>
+            <div class="text-[10px] font-bold text-amber-950">SPAN 80 (HLB 4.3)</div>
             <div id="sim-st1-span" class="text-sm font-black text-amber-950">${spanPct}% (${spanG} g)</div>
           </div>
-          <div class="p-2.5 rounded-xl ${isOptimal ? 'bg-emerald-600 text-white' : 'bg-slate-900 text-amber-300'}">
+          <div class="p-2.5 rounded-xl ${isOptimal ? 'bg-emerald-800 text-white' : 'bg-slate-900 text-amber-200'}">
             <div class="text-[10px] font-bold opacity-85">HLB CAMPURAN</div>
             <div id="sim-st1-hlb" class="text-base font-black font-mono">${hlb}</div>
           </div>
@@ -112,25 +112,25 @@ function renderInteractiveLabSimulation(stationIdx, containerEl) {
       <div class="p-4 rounded-2xl border-2 ${isGood ? 'border-emerald-400 bg-emerald-50/50' : 'border-amber-300 bg-white'} space-y-3">
         <div class="flex items-center justify-between">
           <div class="font-black text-slate-900 text-xs sm:text-sm">⚙️ Panel Kontrol Mesin Tablet Rotary & IPC</div>
-          <span class="px-2.5 py-1 rounded-full text-[11px] font-black ${isGood ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'}">
+          <span class="px-2.5 py-1 rounded-full text-[11px] font-black ${isGood ? 'bg-emerald-800 text-white' : 'bg-rose-800 text-white'}">
             Tablet Capping: ${capping}% ${isGood ? '(MEMENUHI SYARAT < 1%)' : '(TINGGI / REJECT)'}
           </span>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
           <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
-            <label class="font-bold text-slate-700 block mb-1">Kecepatan Turret: <span class="text-teal-700">${rpm} RPM</span></label>
+            <label class="font-bold text-slate-900 block mb-1">Kecepatan Turret: <span class="text-teal-950">${rpm} RPM</span></label>
             <input id="sim-st2-rpm" type="range" min="20" max="60" value="${rpm}" class="w-full accent-teal-600" />
-            <div class="text-[10px] text-slate-500 mt-0.5">Optimal: 25–35 RPM</div>
+            <div class="text-[10px] text-slate-600 font-medium mt-0.5">Optimal: 25–35 RPM</div>
           </div>
           <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
-            <label class="font-bold text-slate-700 block mb-1">Pra-Kompresi: <span class="text-indigo-700">${preComp.toFixed(1)} kN</span></label>
+            <label class="font-bold text-slate-900 block mb-1">Pra-Kompresi: <span class="text-indigo-950">${preComp.toFixed(1)} kN</span></label>
             <input id="sim-st2-pre" type="range" min="0" max="5" step="0.5" value="${preComp}" class="w-full accent-indigo-600" />
-            <div class="text-[10px] text-slate-500 mt-0.5">Optimal: 2.5–4.0 kN (buang udara)</div>
+            <div class="text-[10px] text-slate-600 font-medium mt-0.5">Optimal: 2.5–4.0 kN (buang udara)</div>
           </div>
           <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
-            <label class="font-bold text-slate-700 block mb-1">Kadar Air Granul (LOD): <span class="text-amber-700">${lod.toFixed(1)}%</span></label>
+            <label class="font-bold text-slate-900 block mb-1">Kadar Air Granul (LOD): <span class="text-amber-950">${lod.toFixed(1)}%</span></label>
             <input id="sim-st2-lod" type="range" min="0.4" max="3.0" step="0.2" value="${lod}" class="w-full accent-amber-600" />
-            <div class="text-[10px] text-slate-500 mt-0.5">Optimal: 1.6% – 2.2%</div>
+            <div class="text-[10px] text-slate-600 font-medium mt-0.5">Optimal: 1.6% – 2.2%</div>
           </div>
         </div>
       </div>
@@ -158,25 +158,25 @@ function renderInteractiveLabSimulation(stationIdx, containerEl) {
       <div class="p-4 rounded-2xl border-2 ${s.solved ? 'border-emerald-400 bg-emerald-50/40' : 'border-indigo-200 bg-white'} space-y-3">
         <div class="flex items-center justify-between">
           <div class="font-black text-slate-900 text-xs sm:text-sm">📈 Kromatogram HPLC Interaktif (Amoksisilin 254 nm)</div>
-          <button id="btn-sim-st3-integrate" type="button" class="px-3 py-1 rounded-xl ${s.integrated ? 'bg-emerald-600 text-white' : 'bg-indigo-600 hover:bg-indigo-500 text-white'} font-bold text-xs shadow">
+          <button id="btn-sim-st3-integrate" type="button" class="px-3 py-1 rounded-xl ${s.integrated ? 'bg-emerald-800 text-white' : 'bg-indigo-800 hover:bg-indigo-900 text-white'} font-bold text-xs shadow">
             ${s.integrated ? '✓ Puncak Terintegrasi (AUC = 845.210)' : '🔍 Klik Integrasi Puncak Utama (tR = 4.82 mnt)'}
           </button>
         </div>
         <canvas id="sim-st3-canvas" width="520" height="140" class="w-full rounded-xl bg-slate-950 border border-slate-700 cursor-crosshair"></canvas>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
           <div>
-            <label class="text-[11px] font-bold text-slate-700">Hitung % Kadar ((845.210 / 824.600) × 100%):</label>
+            <label class="text-[11px] font-bold text-slate-900">Hitung % Kadar ((845.210 / 824.600) × 100%):</label>
             <input id="sim-st3-assay" type="number" step="0.1" placeholder="Contoh: 102.5" value="${s.calcAssay}" class="w-full mt-1 px-2.5 py-1.5 rounded-lg border border-slate-300 font-mono text-xs" />
           </div>
           <div>
-            <label class="text-[11px] font-bold text-slate-700">Keputusan Apoteker QA (Syarat FI: 90–110%):</label>
+            <label class="text-[11px] font-bold text-slate-900">Keputusan Apoteker QA (Syarat FI: 90–110%):</label>
             <select id="sim-st3-dec" class="w-full mt-1 px-2.5 py-1.5 rounded-lg border border-slate-300 font-bold text-xs">
               <option value="">-- Pilih Keputusan --</option>
               <option value="RELEASE" ${s.releaseDecision === 'RELEASE' ? 'selected' : ''}>RELEASE (Memenuhi Syarat)</option>
               <option value="REJECT" ${s.releaseDecision === 'REJECT' ? 'selected' : ''}>REJECT (Tidak Memenuhi Syarat)</option>
             </select>
           </div>
-          <button id="btn-sim-st3-verify" type="button" class="py-2 px-3 rounded-xl bg-teal-700 hover:bg-teal-600 text-white font-bold text-xs">
+          <button id="btn-sim-st3-verify" type="button" class="py-2 px-3 rounded-xl bg-teal-800 hover:bg-teal-900 text-white font-bold text-xs">
             Verifikasi Kadar & CoA
           </button>
         </div>
@@ -331,10 +331,10 @@ function renderInteractiveLabSimulation(stationIdx, containerEl) {
           </span>
         </div>
         <div class="flex flex-wrap gap-2">
-          <button id="btn-st8-tare" type="button" class="px-3 py-1.5 rounded-xl ${s.tared ? 'bg-emerald-700 text-white' : 'bg-slate-800 text-white'} font-bold text-xs">1. Tare (0.0 mg)</button>
-          <button id="btn-st8-add" type="button" class="px-3 py-1.5 rounded-xl bg-teal-700 hover:bg-teal-600 text-white font-bold text-xs">2. +1 Tab Parasetamol 500 mg</button>
-          <button id="btn-st8-reset" type="button" class="px-2.5 py-1.5 rounded-xl bg-slate-200 text-slate-700 font-bold text-xs">Reset Tablet</button>
-          <button id="btn-st8-crush" type="button" class="px-3 py-1.5 rounded-xl ${s.crushed ? 'bg-emerald-700 text-white' : 'bg-amber-600 text-white'} font-bold text-xs">3. Gerus Homogen di Lumpang</button>
+          <button id="btn-st8-tare" type="button" class="px-3 py-1.5 rounded-xl ${s.tared ? 'bg-emerald-800 text-white' : 'bg-slate-900 text-white'} font-bold text-xs">1. Tare (0.0 mg)</button>
+          <button id="btn-st8-add" type="button" class="px-3 py-1.5 rounded-xl bg-teal-800 hover:bg-teal-900 text-white font-bold text-xs">2. +1 Tab Parasetamol 500 mg</button>
+          <button id="btn-st8-reset" type="button" class="px-2.5 py-1.5 rounded-xl bg-slate-200 text-slate-900 font-bold text-xs">Reset Tablet</button>
+          <button id="btn-st8-crush" type="button" class="px-3 py-1.5 rounded-xl ${s.crushed ? 'bg-emerald-800 text-white' : 'bg-amber-800 text-white'} font-bold text-xs">3. Gerus Homogen di Lumpang</button>
           <select id="sel-st8-label" class="px-2.5 py-1.5 rounded-xl border border-slate-300 text-xs font-bold">
             <option value="">4. Pilih Warna Etiket</option>
             <option value="putih" ${s.labelColor === 'putih' ? 'selected' : ''}>Etiket Putih (Oral) • BUD 180 Hari</option>
@@ -364,9 +364,9 @@ function renderInteractiveLabSimulation(stationIdx, containerEl) {
       <div class="p-4 rounded-2xl border-2 ${s.solved ? 'border-emerald-400 bg-emerald-50/40' : 'border-indigo-200 bg-white'} space-y-2.5">
         <div class="font-black text-slate-900 text-xs sm:text-sm">💉 Simulator Demonstrasi Pen Insulin & Pelaporan MESO</div>
         <div class="flex flex-wrap gap-2 text-xs">
-          <button id="btn-st9-prime" type="button" class="px-3 py-1.5 rounded-xl ${s.primed ? 'bg-emerald-600 text-white' : 'bg-indigo-700 text-white'} font-bold">1. Priming 2 Unit (Buang Gelembung)</button>
-          <button id="btn-st9-inject" type="button" class="px-3 py-1.5 rounded-xl ${s.holdSec === 10 ? 'bg-emerald-600 text-white' : 'bg-teal-700 text-white'} font-bold">2. Suntik Subkutan 90° & Tahan 10 Detik</button>
-          <button id="btn-st9-meso" type="button" class="px-3 py-1.5 rounded-xl ${s.mesoFilled ? 'bg-emerald-600 text-white' : 'bg-amber-600 text-white'} font-bold">3. Catat Batuk Kaptopril di Form MESO (Naranjo=7)</button>
+          <button id="btn-st9-prime" type="button" class="px-3 py-1.5 rounded-xl ${s.primed ? 'bg-emerald-800 text-white' : 'bg-indigo-800 text-white'} font-bold">1. Priming 2 Unit (Buang Gelembung)</button>
+          <button id="btn-st9-inject" type="button" class="px-3 py-1.5 rounded-xl ${s.holdSec === 10 ? 'bg-emerald-800 text-white' : 'bg-teal-800 text-white'} font-bold">2. Suntik Subkutan 90° & Tahan 10 Detik</button>
+          <button id="btn-st9-meso" type="button" class="px-3 py-1.5 rounded-xl ${s.mesoFilled ? 'bg-emerald-800 text-white' : 'bg-amber-800 text-white'} font-bold">3. Catat Batuk Kaptopril di Form MESO (Naranjo=7)</button>
         </div>
       </div>
     `;

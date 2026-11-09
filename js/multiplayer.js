@@ -79,7 +79,7 @@ function renderPeersList() {
   html += `
     <div class="${isAssessor ? 'bg-amber-950/70 border-amber-500/50' : 'bg-teal-950/70 border-teal-500/50'} border rounded-xl p-2.5 flex items-center justify-between">
       <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded-full ${isAssessor ? 'bg-amber-600' : 'bg-teal-600'} text-white flex items-center justify-center font-bold text-xs">
+        <div class="w-8 h-8 rounded-full ${isAssessor ? 'bg-amber-800' : 'bg-teal-800'} text-white flex items-center justify-center font-bold text-xs">
           ${state.userProfile.gender === 'female' ? '👩‍⚕️' : '👨‍⚕️'}
         </div>
         <div>
@@ -99,7 +99,7 @@ function renderPeersList() {
     html += `
       <div class="bg-indigo-950/70 border border-indigo-500/50 rounded-xl p-2.5 flex items-center justify-between">
         <div class="flex items-center gap-2">
-          <div class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xs">
+          <div class="w-8 h-8 rounded-full bg-indigo-800 text-white flex items-center justify-center font-bold text-xs">
             ${remote.gender === 'female' ? '👩‍⚕️' : '👨‍⚕️'}
           </div>
           <div>
@@ -127,7 +127,7 @@ function renderPeersList() {
           </div>
           <div>
             <div class="font-bold text-slate-200 text-xs">${b.data.name}</div>
-            <div class="text-[10px] text-slate-400 font-mono">${b.data.nim} • ${statusBadge}</div>
+            <div class="text-[10px] text-slate-300 font-mono">${b.data.nim} • ${statusBadge}</div>
           </div>
         </div>
         <div class="text-right">

@@ -28,10 +28,10 @@ async function openInstructionModal() {
   const doorStatus = document.getElementById("inst-door-status");
   if (state.phase === "prep") {
     doorStatus.textContent = "Pintu Terkunci (Waktu Persiapan)";
-    doorStatus.className = "px-2.5 py-1 rounded-lg font-bold text-xs bg-amber-200 text-amber-900";
+    doorStatus.className = "px-2.5 py-1 rounded-lg font-bold text-xs bg-amber-200 text-amber-950";
   } else {
     doorStatus.textContent = "Pintu Terbuka (Silakan Masuk)";
-    doorStatus.className = "px-2.5 py-1 rounded-lg font-bold text-xs bg-emerald-200 text-emerald-900";
+    doorStatus.className = "px-2.5 py-1 rounded-lg font-bold text-xs bg-emerald-200 text-emerald-950";
   }
 
   const modal = document.getElementById("modal-instruction");
@@ -58,14 +58,14 @@ function openMapModal() {
       <tr class="hover:bg-slate-50 transition ${isCurrent ? 'bg-teal-50/70 font-semibold' : ''}">
         <td class="p-2.5 text-center font-bold">${st.code}</td>
         <td class="p-2.5 font-medium">${st.title}</td>
-        <td class="p-2.5 text-slate-500">${st.area}</td>
+        <td class="p-2.5 text-slate-600 font-medium">${st.area}</td>
         <td class="p-2.5 text-center">
-          <span class="px-2 py-0.5 rounded text-[11px] font-bold ${prog.completed ? 'bg-emerald-100 text-emerald-800' : isCurrent ? 'bg-teal-100 text-teal-800' : 'bg-slate-100 text-slate-600'}">
+          <span class="px-2 py-0.5 rounded text-[11px] font-bold ${prog.completed ? 'bg-emerald-100 text-emerald-950' : isCurrent ? 'bg-teal-100 text-teal-950' : 'bg-slate-100 text-slate-900'}">
             ${prog.completed ? 'Selesai' : isCurrent ? 'Sedang Aktif' : 'Belum'}
           </span>
         </td>
         <td class="p-2.5 text-center">
-          <button type="button" class="btn-jump-station px-3 py-1 rounded-lg text-xs font-bold transition ${canJump ? (isCurrent ? 'bg-emerald-700 hover:bg-emerald-600 text-white' : 'bg-teal-700 hover:bg-teal-600 text-white') : 'bg-slate-200 text-slate-400 cursor-not-allowed'}" data-idx="${idx}" data-allowed="${canJump}">
+          <button type="button" class="btn-jump-station px-3 py-1 rounded-lg text-xs font-bold transition ${canJump ? (isCurrent ? 'bg-emerald-800 hover:bg-emerald-900 text-white' : 'bg-teal-800 hover:bg-teal-900 text-white') : 'bg-slate-200 text-slate-600 cursor-not-allowed'}" data-idx="${idx}" data-allowed="${canJump}">
             ${isCurrent ? 'Posisi Anda ✓' : (canJump ? 'Ke Station Ini →' : 'Terkunci 🔒')}
           </button>
         </td>
@@ -209,10 +209,10 @@ function renderWorkstationModal() {
 
   if (stationNo === 10) {
     contentDiv.innerHTML = `
-      <div class="p-6 rounded-2xl bg-amber-50 border border-amber-200 text-center space-y-2">
+      <div class="p-6 rounded-2xl bg-amber-50 border border-amber-300 text-center space-y-2">
         <div class="text-3xl">☕</div>
         <div class="font-bold text-base text-amber-950">Station 10 - Istirahat</div>
-        <div class="text-xs text-amber-900 leading-relaxed">
+        <div class="text-xs text-amber-950 leading-relaxed font-medium">
           Ini adalah stasiun istirahat resmi. Anda dapat memanfaatkan waktu untuk beristirahat sebelum rotasi ke stasiun berikutnya.
         </div>
       </div>
@@ -228,12 +228,12 @@ function renderWorkstationModal() {
   } else if (currentWorkTab === "lab") {
     contentDiv.innerHTML = `
       <div class="space-y-3">
-        <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center justify-between">
+        <div class="bg-amber-50 border border-amber-300 rounded-xl p-3 flex items-center justify-between">
           <div>
-            <div class="font-bold text-amber-900">🔬 Pemeriksaan Alat 3D & Simulasi Laboratorium Interaktif</div>
+            <div class="font-bold text-amber-950">🔬 Pemeriksaan Alat 3D & Simulasi Laboratorium Interaktif</div>
             <div class="text-xs text-amber-950 mt-0.5">${serverData.labObjectTitle || st.labObjectTitle || ""}</div>
           </div>
-          <span class="px-2.5 py-1 rounded-lg bg-amber-200/80 text-amber-950 font-bold text-[10px]">INTERAKTIF LANGSUNG</span>
+          <span class="px-2.5 py-1 rounded-lg bg-amber-200 text-amber-950 font-bold text-[10px]">INTERAKTIF LANGSUNG</span>
         </div>
         <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 font-mono text-xs leading-relaxed text-slate-800">
           ${serverData.labData || st.labData || ""}
@@ -258,14 +258,14 @@ function renderWorkstationModal() {
     if (isSubmitted) {
       contentDiv.innerHTML = `
         <div class="space-y-4 py-6 text-center">
-          <div class="w-16 h-16 mx-auto bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center text-3xl font-bold">
+          <div class="w-16 h-16 mx-auto bg-emerald-100 text-emerald-950 rounded-full flex items-center justify-center text-3xl font-bold">
             ✓
           </div>
           <div class="space-y-1">
-            <h4 class="text-base font-bold text-slate-800">Jawaban diterima</h4>
-            <p class="text-xs text-slate-500">Stasiun ini telah selesai dikerjakan dan jawaban Anda telah diterima oleh server.</p>
+            <h4 class="text-base font-bold text-slate-900">Jawaban diterima</h4>
+            <p class="text-xs text-slate-600 font-medium">Stasiun ini telah selesai dikerjakan dan jawaban Anda telah diterima oleh server.</p>
           </div>
-          <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-900 text-xs font-semibold inline-flex items-center gap-2">
+          <div class="p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-emerald-950 text-xs font-bold inline-flex items-center gap-2">
             <span>🔒</span> Stasiun terkunci.
           </div>
         </div>
@@ -285,8 +285,8 @@ function renderWorkstationModal() {
           </div>
         ` : ""}
 
-        <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-3">
-          <div class="font-bold text-indigo-900 mb-1">Pertanyaan Keputusan Klinis / Farmasetis Akhir:</div>
+        <div class="bg-indigo-50 border border-indigo-300 rounded-xl p-3">
+          <div class="font-bold text-indigo-950 mb-1">Pertanyaan Keputusan Klinis / Farmasetis Akhir:</div>
           <div class="text-xs text-indigo-950">${decisionQ}</div>
         </div>
 
@@ -337,10 +337,10 @@ function switchBlueprintTab(activeKey) {
     const content = document.getElementById(`bp-content-${key}`);
     if (btn && content) {
       if (key === activeKey) {
-        btn.className = "px-3.5 py-1.5 rounded-xl bg-indigo-700 text-white font-bold";
+        btn.className = "px-3.5 py-1.5 rounded-xl bg-indigo-800 text-white font-bold";
         content.classList.remove("hidden");
       } else {
-        btn.className = "px-3.5 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200";
+        btn.className = "px-3.5 py-1.5 rounded-xl bg-slate-100 text-slate-900 hover:bg-slate-200 font-medium";
         content.classList.add("hidden");
       }
     }
@@ -351,8 +351,8 @@ function switchBlueprintTab(activeKey) {
     tbody.innerHTML = STATIONS.map(st => `
       <tr class="hover:bg-slate-50 text-xs">
         <td class="p-2 font-bold">${st.code}</td>
-        <td class="p-2 font-semibold text-teal-800">${st.title}</td>
-        <td class="p-2 text-slate-500">${st.area}</td>
+        <td class="p-2 font-semibold text-teal-950">${st.title}</td>
+        <td class="p-2 text-slate-600 font-medium">${st.area}</td>
         <td class="p-2">${st.type}</td>
         <td class="p-2 text-[11px] font-mono text-slate-600">${st.labObjectTitle}</td>
       </tr>

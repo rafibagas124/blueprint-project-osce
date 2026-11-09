@@ -23,25 +23,25 @@ function createRealisticTileFloorTexture(repeatX = 12, repeatY = 64) {
     const ctx = c.getContext("2d");
 
     // Nat ubin (grout) abu-abu gelap kontras nyaman
-    ctx.fillStyle = "#64748b";
+    ctx.fillStyle = "#334155";
     ctx.fillRect(0, 0, 256, 256);
 
     // 2x2 ubin keramik porselen hangat (tidak menyilaukan mata)
     const tiles = [
-      [4, 4, 120, 120, "#cbd5e1"],
-      [132, 4, 120, 120, "#c4ceda"],
-      [4, 132, 120, 120, "#c4ceda"],
-      [132, 132, 120, 120, "#cbd5e1"]
+      [4, 4, 120, 120, "#52637a"],
+      [132, 4, 120, 120, "#4a596e"],
+      [4, 132, 120, 120, "#4a596e"],
+      [132, 132, 120, 120, "#52637a"]
     ];
     tiles.forEach(([x, y, w, h, col]) => {
       ctx.fillStyle = col;
       ctx.fillRect(x, y, w, h);
       // Bevel tepi ubin halus
-      ctx.strokeStyle = "#dde5ed";
+      ctx.strokeStyle = "#64748b";
       ctx.lineWidth = 2;
       ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
       // Bintik granit/marmer halus
-      ctx.fillStyle = "rgba(100, 116, 139, 0.10)";
+      ctx.fillStyle = "rgba(30, 41, 59, 0.15)";
       for (let s = 0; s < 18; s++) {
         const sx = x + ((s * 37) % (w - 8)) + 4;
         const sy = y + ((s * 53) % (h - 8)) + 4;
@@ -152,8 +152,8 @@ function createDoorPosterTexture(station) {
 
   // === HEADER BANNER (Teal Medis Kuat) ===
   const hGrad = ctx.createLinearGradient(0, 0, 512, 130);
-  hGrad.addColorStop(0, "#0d6b63");
-  hGrad.addColorStop(1, "#0f766e");
+  hGrad.addColorStop(0, "#042f2e");
+  hGrad.addColorStop(1, "#0f5132");
   ctx.fillStyle = hGrad;
   ctx.fillRect(0, 0, 512, 130);
 
@@ -184,7 +184,7 @@ function createDoorPosterTexture(station) {
   ctx.fillStyle = "#fffbeb";
   ctx.fillRect(0, 187, 512, 340);
 
-  ctx.fillStyle = "#92400e";
+  ctx.fillStyle = "#78350f";
   ctx.font = "800 20px Inter, sans-serif";
   ctx.textAlign = "left";
   ctx.fillText("📋  INSTRUKSI KHUSUS:", 28, 222);
@@ -199,7 +199,7 @@ function createDoorPosterTexture(station) {
 
   // Teks petunjuk — BESAR, KONTRAS TINGGI, hitam di cream
   ctx.font = "600 19px Inter, sans-serif";
-  ctx.fillStyle = "#1c1917";
+  ctx.fillStyle = "#0c0a09";
   const textToDraw = station.doorShortInstruction || station.scenario || "";
   const words = textToDraw.split(" ");
   let lineTxt = "";
@@ -227,12 +227,12 @@ function createDoorPosterTexture(station) {
   ctx.fillStyle = "#ccfbf1";
   ctx.fillRect(0, 531, 512, 110);
 
-  ctx.fillStyle = "#065f46";
+  ctx.fillStyle = "#042f2e";
   ctx.font = "800 18px Inter, sans-serif";
   ctx.textAlign = "left";
   ctx.fillText("KOMPETENSI UTAMA:", 28, 562);
 
-  ctx.fillStyle = "#064e3b";
+  ctx.fillStyle = "#042f2e";
   ctx.font = "600 17px Inter, sans-serif";
   const compText = (station.competencies || "").length > 60
     ? (station.competencies || "").substring(0, 57) + "…"
@@ -240,7 +240,7 @@ function createDoorPosterTexture(station) {
   ctx.fillText(compText, 28, 588);
 
   // Waktu ujian
-  ctx.fillStyle = "#065f46";
+  ctx.fillStyle = "#042f2e";
   ctx.font = "700 16px Inter, sans-serif";
   ctx.fillText("⏱  Waktu: 10 menit / station", 28, 618);
 
@@ -250,8 +250,8 @@ function createDoorPosterTexture(station) {
 
   // === FOOTER CTA (gradient kuat, tulisan besar) ===
   const ftGrad = ctx.createLinearGradient(0, 645, 0, 768);
-  ftGrad.addColorStop(0, "#0d6b63");
-  ftGrad.addColorStop(1, "#065f46");
+  ftGrad.addColorStop(0, "#042f2e");
+  ftGrad.addColorStop(1, "#064e3b");
   ctx.fillStyle = ftGrad;
   ctx.fillRect(0, 645, 512, 123);
 
@@ -260,7 +260,7 @@ function createDoorPosterTexture(station) {
   ctx.textAlign = "center";
   ctx.fillText("⬇  KLIK / [E] BACA & MASUK", 256, 695);
   ctx.font = "600 18px Inter, sans-serif";
-  ctx.fillStyle = "#a7f3d0";
+  ctx.fillStyle = "#ffffff";
   ctx.fillText("Tekan [E] atau klik tombol untuk membuka", 256, 730);
   ctx.fillText("petunjuk lengkap dan memasuki ruangan", 256, 753);
 
@@ -295,9 +295,9 @@ function buildCorridor3D(corridorGroup, isSecondary = false) {
   const floorGeo = new THREE.PlaneGeometry(7.2, 40);
   const floorMat = new THREE.MeshStandardMaterial({
     map: createRealisticTileFloorTexture(12, 66),
-    color: 0xffffff,
-    roughness: 0.26,
-    metalness: 0.08
+    color: 0x94a3b8,
+    roughness: 0.45,
+    metalness: 0.05
   });
   const floor = new THREE.Mesh(floorGeo, floorMat);
   floor.rotation.x = -Math.PI / 2;
@@ -329,7 +329,7 @@ function buildCorridor3D(corridorGroup, isSecondary = false) {
 
   // === PLAFON TEDUH & LAMPU PANEL PLAFON ===
   const ceilGeo = new THREE.PlaneGeometry(7.2, 40);
-  const ceilMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.9 });
+  const ceilMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.92 });
   const ceiling = new THREE.Mesh(ceilGeo, ceilMat);
   ceiling.rotation.x = Math.PI / 2;
   ceiling.position.set(0, 3.8, -4);
@@ -362,7 +362,7 @@ function buildCorridor3D(corridorGroup, isSecondary = false) {
   // Bagian atas: Warm Architectural Stone (0xd6d1c7 - tidak menyilaukan)
   // Bagian bawah (0..1.08m): Deep Slate Teal (0x164e63) agar jas putih avatar sangat jelas!
   // Catatan: Dinding antara Koridor A (kanan) & Koridor B (kiri) dibuka di z=9.0..12.6 sebagai Jalan Penghubung!
-  const wallMat = new THREE.MeshStandardMaterial({ color: 0xd6d1c7, roughness: 0.78 });
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0x7c8c9e, roughness: 0.82 });
   const wainscotMat = new THREE.MeshStandardMaterial({ color: 0x164e63, roughness: 0.55 });
 
   if (!isSecondary) {
@@ -635,9 +635,9 @@ function buildConnectingBridge3D(corridorGroup) {
     new THREE.PlaneGeometry(bridgeWidthX + 0.6, 3.8),
     new THREE.MeshStandardMaterial({
       map: createRealisticTileFloorTexture(8, 6),
-      color: 0xffffff,
-      roughness: 0.25,
-      metalness: 0.08
+      color: 0x94a3b8,
+      roughness: 0.45,
+      metalness: 0.05
     })
   );
   bridgeFloor.rotation.x = -Math.PI / 2;
@@ -816,16 +816,16 @@ function buildRoom3D(roomGroup) {
     new THREE.PlaneGeometry(7, 7),
     new THREE.MeshStandardMaterial({
       map: createRealisticTileFloorTexture(11, 11),
-      color: 0xffffff,
-      roughness: 0.26,
-      metalness: 0.08
+      color: 0x94a3b8,
+      roughness: 0.45,
+      metalness: 0.05
     })
   );
   roomFloor.rotation.x = -Math.PI / 2;
   roomGroup.add(roomFloor);
 
   // Dinding ruang pemeriksaan (warm stone-beige + wainscot biru gelap kontras AAA)
-  const wallMat = new THREE.MeshStandardMaterial({ color: 0xd6d1c7, roughness: 0.75 });
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0x7c8c9e, roughness: 0.82 });
   const backW = new THREE.Mesh(new THREE.BoxGeometry(7, 3.6, 0.2), wallMat);
   backW.position.set(0, 1.8, -3.5);
   roomGroup.add(backW);

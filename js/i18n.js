@@ -237,10 +237,10 @@ function showToast(message, type = "info", durationMs = 3800) {
   const toast = document.createElement("div");
 
   const styles = {
-    success: "bg-emerald-900/95 border-emerald-400 text-emerald-50",
-    error: "bg-rose-900/95 border-rose-400 text-rose-50",
-    warning: "bg-amber-900/95 border-amber-400 text-amber-50",
-    info: "bg-slate-900/95 border-teal-400 text-slate-50"
+    success: "bg-emerald-950 border-emerald-400 text-white",
+    error: "bg-rose-950 border-rose-400 text-white",
+    warning: "bg-amber-950 border-amber-400 text-white",
+    info: "bg-slate-900 border-teal-400 text-white"
   };
   const icons = {
     success: "✅",
@@ -249,11 +249,11 @@ function showToast(message, type = "info", durationMs = 3800) {
     info: "🩺"
   };
 
-  toast.className = `pointer-events-auto flex items-start gap-2.5 px-4 py-3 rounded-2xl border shadow-2xl backdrop-blur-md text-xs font-semibold transition-all duration-300 transform translate-y-0 opacity-100 ${styles[type] || styles.info}`;
+  toast.className = `pointer-events-auto flex items-start gap-2.5 px-4 py-3 rounded-2xl border shadow-2xl text-xs font-semibold transition-all duration-300 transform translate-y-0 opacity-100 ${styles[type] || styles.info}`;
   toast.innerHTML = `
     <span class="text-base leading-none mt-0.5">${icons[type] || icons.info}</span>
     <div class="flex-1 leading-relaxed">${message}</div>
-    <button type="button" class="text-white/60 hover:text-white font-bold px-1">✕</button>
+    <button type="button" class="text-white hover:text-slate-200 font-bold px-1">✕</button>
   `;
 
   toast.querySelector("button").addEventListener("click", () => toast.remove());
