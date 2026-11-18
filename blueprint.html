@@ -17,6 +17,7 @@
   <script>window.THREE || document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');</script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/osce-dashboard.css" />
 </head>
 <body>
 
@@ -68,6 +69,13 @@
       <button id="btn-room-desk" type="button" class="hud-interactive bg-[#312e81] text-white px-3 py-1.5 rounded-xl shadow-lg border-2 border-indigo-400 text-xs font-bold flex items-center gap-1.5">
         <span class="px-1.5 py-0.5 rounded bg-white text-indigo-950 font-black text-[10px]">E</span>
         <span>Isi Lembar Kerja & Keputusan</span>
+      </button>
+    </div>
+
+    <div id="room-marker-door" class="marker-3d hidden">
+      <button id="btn-room-door" type="button" class="hud-interactive bg-[#1e1b4b] text-white px-3 py-1.5 rounded-xl shadow-lg border-2 border-indigo-400 text-xs font-bold flex items-center gap-1.5 transition transform hover:scale-105">
+        <span class="px-1.5 py-0.5 rounded bg-white text-indigo-950 font-black text-[10px]">E</span>
+        <span id="room-door-label">Keluar ke Koridor</span>
       </button>
     </div>
   </div>
@@ -177,6 +185,10 @@
           <button id="btn-open-blueprint" type="button" class="bg-indigo-800 hover:bg-indigo-900 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg flex items-center gap-1.5 transition">
             <span>📐</span>
             <span class="hidden sm:inline">Blueprint</span>
+          </button>
+          <button id="btn-open-clinical-osce" type="button" class="bg-emerald-800 hover:bg-emerald-900 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg flex items-center gap-1.5 transition" title="Buka modul OSCE klinis 8 station">
+            <span>🩺</span>
+            <span class="hidden sm:inline">OSCE Klinis</span>
           </button>
           <button id="btn-hud-lang" type="button" onclick="OSCE_I18N.toggleLanguage()" class="btn-lang-switch glass-card px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-900 hover:bg-slate-100 flex items-center gap-1" title="Ganti Bahasa (ID / EN)">
             🇮🇩 <span>ID</span>
@@ -725,5 +737,6 @@
   <script src="js/input.js"></script>
   <script src="js/pwa.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/osce-dashboard.js"></script>
 </body>
 </html>

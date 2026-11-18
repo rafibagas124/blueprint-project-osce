@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OSCE Klinis — Multi-screen Figma Preview</title>
+  <style>
+    :root {
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+      color: #18323c;
+      background: #e9eef2;
+      font-synthesis: none;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 1440px; background: #e9eef2; }
+    button, input, textarea { font: inherit; }
+    .artboard-stack { padding: 48px 0 0; }
+    .artboard {
+      width: 1440px;
+      height: 1024px;
+      margin: 0 auto 80px;
+      overflow: hidden;
+      background: #f3f6f8;
+      box-shadow: 0 18px 55px #18364820;
+    }
+    .topbar {
+      height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 27px;
+      color: #f8fafc;
+      background: #102a36;
+      border-bottom: 1px solid #244651;
+    }
+    .brand { display: flex; align-items: center; gap: 11px; }
+    .brand-mark {
+      width: 38px; height: 38px; display: grid; place-items: center;
+      border: 1px solid #62b9a2; border-radius: 12px;
+      color: #c5f6e5; background: #176658; font-size: 14px; font-weight: 900;
+    }
+    .brand strong { display: block; font-size: 14px; letter-spacing: -.02em; }
+    .brand small { display: block; margin-top: 3px; color: #b9c9d0; font-size: 8px; letter-spacing: .1em; text-transform: uppercase; }
+    .top-actions { display: flex; align-items: center; gap: 10px; }
+    .top-label { color: #c6d5da; font-size: 10px; font-weight: 700; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 6px 9px; border: 1px solid #65885e; border-radius: 999px;
+      color: #d9f99d; background: #294b39; font-size: 8px; font-weight: 850;
+      letter-spacing: .06em; text-transform: uppercase; white-space: nowrap;
+    }
+    .badge-teal { color: #d1fae5; background: #155e54; border-color: #3a9383; }
+    .badge-light { color: #355a63; background: #eef6f5; border-color: #c9e2dd; }
+    .main-title { color: #102a36; font-size: 24px; font-weight: 900; letter-spacing: -.04em; }
+    .eyebrow { color: #56727b; font-size: 8px; font-weight: 850; letter-spacing: .12em; text-transform: uppercase; }
+    .muted { color: #657780; }
+    .surface { background: #fff; border: 1px solid #dce5e9; border-radius: 14px; box-shadow: 0 5px 18px #18364808; }
+    .card-title { display: flex; align-items: center; gap: 8px; color: #183541; font-size: 11px; font-weight: 900; }
+    .icon {
+      width: 25px; height: 25px; flex: 0 0 25px; display: grid; place-items: center;
+      border-radius: 8px; color: #0a6a5a; background: #e7f6f1; font-size: 11px; font-weight: 900;
+    }
+    .label { margin-bottom: 5px; color: #4a7173; font-size: 7px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+    .small { color: #53656e; font-size: 9px; line-height: 1.5; }
+    .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+    .chip { padding: 5px 7px; border: 1px solid #dce5e9; border-radius: 999px; background: #f0f4f6; color: #3c5862; font-size: 8px; font-weight: 700; }
+    .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+    .section-heading h2 { margin: 4px 0 0; color: #102a36; font-size: 17px; font-weight: 900; letter-spacing: -.03em; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 8px 11px; border: 0; border-radius: 8px; color: #fff;
+      background: #176d61; font-size: 9px; font-weight: 850; white-space: nowrap;
+    }
+    .btn-dark { background: #183541; }
+    .btn-outline { color: #34545e; background: #fff; border: 1px solid #cad9df; }
+    .stat {
+      min-width: 150px; padding: 12px 15px; border: 1px solid #dbe5e9;
+      border-radius: 13px; background: #fff;
+    }
+    .stat strong { display: block; color: #123843; font-size: 22px; font-weight: 900; }
+    .stat span { color: #637780; font-size: 8px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .station-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .station-card {
+      min-height: 260px; position: relative; overflow: hidden; padding: 19px;
+      border: 1px solid #d7e2e6; border-radius: 17px; background: #fff;
+      box-shadow: 0 8px 24px #1836480a;
+    }
+    .station-card:after {
+      position: absolute; right: -24px; bottom: -34px; width: 128px; height: 128px;
+      border-radius: 50%; background: #eff8f5; content: "";
+    }
+    .station-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; position: relative; z-index: 1; }
+    .station-icon { width: 43px; height: 43px; display: grid; place-items: center; border-radius: 13px; color: #126b5c; background: #e5f5ef; font-size: 19px; font-weight: 900; }
+    .station-no { color: #789098; font-size: 8px; font-weight: 900; letter-spacing: .11em; }
+    .duration { padding: 6px 8px; border-radius: 999px; color: #13675b; background: #e8f7f1; font-size: 8px; font-weight: 900; }
+    .station-card h3 { position: relative; z-index: 1; margin: 18px 0 5px; color: #183541; font-size: 16px; font-weight: 900; letter-spacing: -.025em; }
+    .station-card p { position: relative; z-index: 1; margin: 0; color: #657780; font-size: 9px; line-height: 1.5; }
+    .station-footer { position: absolute; z-index: 1; right: 17px; bottom: 17px; left: 19px; display: flex; align-items: center; justify-content: space-between; }
+    .case-count { color: #3a5963; font-size: 9px; font-weight: 800; }
+    .arrow { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 9px; color: #fff; background: #176d61; font-size: 14px; }
+    .screen-content { height: 956px; }
+    .workspace { display: grid; grid-template-columns: 205px minmax(0, 1fr) 315px; height: 956px; }
+    .sidebar { overflow: hidden; padding: 18px 12px; border-right: 1px solid #dce5e9; background: #fff; }
+    .side-heading { margin: 0 7px 12px; color: #62727b; font-size: 8px; font-weight: 900; letter-spacing: .13em; text-transform: uppercase; }
+    .nav-item { display: flex; align-items: center; gap: 9px; margin-bottom: 5px; padding: 9px 8px; border: 1px solid transparent; border-radius: 10px; color: #40545e; }
+    .nav-item.active { color: #0c5048; background: #e8f6f2; border-color: #b4e2d4; }
+    .nav-num { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 8px; background: #edf2f4; font-size: 8px; font-weight: 900; }
+    .nav-item.active .nav-num { color: white; background: #157466; }
+    .nav-name { flex: 1; font-size: 9px; font-weight: 850; }
+    .nav-count { color: #70818a; font-size: 8px; }
+    .sidebar-note { margin: 18px 4px 0; padding: 11px; border-radius: 10px; color: #587079; background: #f3f7f8; font-size: 8px; line-height: 1.5; }
+    .center { overflow: hidden; padding: 17px 18px; }
+    .case-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .case-heading h1 { margin: 4px 0; color: #102a36; font-size: 20px; font-weight: 900; letter-spacing: -.04em; }
+    .case-sub { color: #647681; font-size: 9px; }
+    .timer { display: flex; align-items: center; gap: 8px; padding: 8px 9px; border: 1px solid #d6e0e5; border-radius: 12px; background: #fff; box-shadow: 0 4px 14px #1836480d; }
+    .clock { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 9px; color: #086c5e; background: #e3f6ef; font-size: 15px; }
+    .time { color: #102a36; font-size: 18px; font-weight: 900; font-variant-numeric: tabular-nums; }
+    .timer small { display: block; color: #657780; font-size: 7px; font-weight: 800; }
+    .live-dot { display: inline-block; width: 6px; height: 6px; margin-right: 4px; border-radius: 50%; background: #18a276; }
+    .scenario { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px; padding: 13px; border: 1px solid #c5e5e0; border-radius: 13px; background: #edf7f6; }
+    .scenario p { margin: 0; color: #173c42; font-size: 10px; font-weight: 650; line-height: 1.55; }
+    .tasks { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 12px; margin: 0; padding: 0; list-style: none; counter-reset: task; }
+    .tasks li { position: relative; padding-left: 18px; color: #53656e; font-size: 8px; line-height: 1.4; counter-increment: task; }
+    .tasks li:before { position: absolute; top: 0; left: 0; width: 13px; height: 13px; display: grid; place-items: center; border-radius: 50%; content: counter(task); color: #176c60; background: #e2f5ee; font-size: 7px; font-weight: 900; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+    .panel { margin-bottom: 9px; padding: 11px; }
+    .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+    .rx { padding: 9px; border: 1px solid #ecdfba; border-radius: 10px; background: #fffcf3; }
+    textarea { width: 100%; min-height: 34px; padding: 6px; border: 1px solid #cbd8dd; border-radius: 6px; background: white; color: #263a43; font-size: 8px; resize: none; }
+    .rightbar { overflow: hidden; padding: 16px 12px; border-left: 1px solid #dce5e9; background: #f9fbfc; }
+    .rightbar .panel { padding: 11px; }
+    .mental-row { display: grid; grid-template-columns: 97px 1fr; align-items: center; gap: 7px; margin: 5px 0; color: #5b6d76; font-size: 8px; font-weight: 750; }
+    .mental-value { padding: 5px 6px; border: 1px solid #dce5e9; border-radius: 6px; color: #314a54; background: #f7fafb; font-size: 8px; font-weight: 650; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 6px 4px; border-bottom: 1px solid #e6ecef; text-align: left; vertical-align: middle; }
+    th { color: #637680; font-size: 7px; text-transform: uppercase; }
+    td { color: #455b65; font-size: 8px; }
+    .score-options { display: flex; gap: 3px; }
+    .score-options span { width: 19px; height: 19px; display: grid; place-items: center; border: 1px solid #d8e2e6; border-radius: 5px; color: #5b6e77; background: #f1f5f6; font-size: 8px; font-weight: 900; }
+    .score-options .selected { color: #fff; border-color: #146c5f; background: #146c5f; }
+    .diet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+    .diet-field { padding: 7px; border: 1px solid #dce5e9; border-radius: 8px; background: #fff; }
+    .diet-field span { display: block; margin-bottom: 4px; color: #657780; font-size: 7px; font-weight: 800; }
+    .diet-field strong { color: #23434c; font-size: 10px; }
+    .diet-output { margin-top: 7px; padding: 8px; border-radius: 8px; color: #15574f; background: #e9f8f1; font-size: 11px; font-weight: 900; }
+    .showcase { height: 956px; padding: 18px 22px; }
+    .showcase-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .showcase-card { min-height: 255px; padding: 13px; overflow: hidden; }
+    .showcase-card .card-title { font-size: 10px; }
+    .showcase-card .small { font-size: 8px; }
+    .card-tag { padding: 5px 7px; border-radius: 999px; color: #17695d; background: #e8f7f1; font-size: 7px; font-weight: 900; white-space: nowrap; }
+    .cxr {
+      height: 97px; position: relative; overflow: hidden; display: grid; place-items: center;
+      border: 1px solid #60727a; border-radius: 9px;
+      background: radial-gradient(ellipse at 50% 45%, #647780 0 25%, #1b2b34 27% 68%, #101e26 72%);
+      color: #e4edf0; font-size: 8px; font-weight: 850; letter-spacing: .1em;
+    }
+    .cxr:before,.cxr:after { position: absolute; top: 15px; bottom: 15px; width: 29%; border: 1px solid #9aabb1; border-radius: 50%; content: ""; opacity: .52; }
+    .cxr:before { left: 17%; }.cxr:after { right: 17%; }
+    .scale { display: grid; grid-template-columns: repeat(6,1fr); gap: 4px; margin-top: 8px; }
+    .scale div { padding: 6px 2px; border: 1px solid #dce5e9; border-radius: 7px; text-align: center; background: #f8fafb; }
+    .scale strong { display: block; color: #12695c; font-size: 12px; }
+    .scale span { color: #72828a; font-size: 6px; }
+    .eye-chart { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .eye-box { padding: 9px; border: 1px solid #dce5e9; border-radius: 9px; background: #f8fafb; }
+    .eye-box strong { display: block; margin-bottom: 6px; color: #31525c; font-size: 8px; }
+    .eye-box span { display: block; margin: 3px 0; color: #5c7079; font-size: 7px; }
+    .anchor-note { margin-top: 7px; padding: 7px; border-radius: 8px; color: #49626c; background: #f2f7f8; font-size: 7px; line-height: 1.45; }
+    .rubric-mini { display: grid; gap: 5px; }
+    .rubric-line { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 6px; padding: 5px 0; border-bottom: 1px solid #edf1f2; color: #53656e; font-size: 7px; }
+    .squares { display: flex; gap: 3px; }.squares span { width: 16px; height: 16px; display: grid; place-items: center; border: 1px solid #d8e2e6; border-radius: 4px; color: #60737b; font-size: 7px; font-weight: 900; }
+    .procedure-list { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+    .procedure-list span { padding: 5px 7px; border: 1px solid #dce5e9; border-radius: 7px; color: #405b64; background: #f5f8f9; font-size: 7px; font-weight: 750; }
+    .psych-mark { display: inline-flex; gap: 5px; align-items: center; padding: 5px 7px; border-radius: 7px; color: #805126; background: #fff5e8; font-size: 7px; font-weight: 800; }
+    .footnote { margin-top: 7px; color: #71818a; font-size: 7px; line-height: 1.4; }
+    @media (max-width: 1440px) { .artboard { margin-left: 0; margin-right: 0; } }
+  </style>
+</head>
+<body>
+  <main class="artboard-stack">
+    <section class="artboard" data-name="01 - Landing Dashboard 8 Station OSCE" aria-label="Screen 1: Landing dashboard pemilihan station">
+      <header class="topbar">
+        <div class="brand"><div class="brand-mark">OS</div><div><strong>Clinical OSCE</strong><small>Examination workspace · blueprint 2026</small></div></div>
+        <div class="top-actions"><span class="top-label">Pusat Ujian Kompetensi Klinis</span><span class="badge badge-teal">8 Station Aktif</span><span class="badge">15 Menit / Station</span></div>
+      </header>
+      <div style="padding:34px 42px">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:24px">
+          <div><div class="eyebrow">Dashboard peserta</div><h1 class="main-title" style="margin:7px 0">Pilih Station OSCE</h1><div class="muted" style="font-size:10px">Pilih kelompok kasus untuk membuka workspace ujian dan lembar observasi.</div></div>
+          <div style="display:flex;gap:10px"><div class="stat"><strong>08</strong><span>Station klinis</span></div><div class="stat"><strong>81</strong><span>Kasus tersedia</span></div><div class="stat"><strong>15:00</strong><span>Durasi / station</span></div></div>
+        </div>
+        <div class="station-grid">
+          <article class="station-card"><div class="station-top"><div class="station-icon">♡</div><span class="duration">◷ 15 MENIT</span></div><div class="station-no">STATION 01 · MEDIS</div><h3>Kardiologi</h3><p>Kasus kegawatdaruratan, gagal jantung, aritmia, dan hipertensi.</p><div class="station-footer"><span class="case-count">6 kasus tersedia</span><span class="arrow">→</span></div></article>
+          <article class="station-card"><div class="station-top"><div class="station-icon">〰</div><span class="duration">◷ 15 MENIT</span></div><div class="station-no">STATION 02 · MEDIS</div><h3>Respirasi</h3><p>Kasus PPOK, TB, pneumonia, asma, bronkiektasis, dan tumor paru.</p><div class="station-footer"><span class="case-count">6 kasus tersedia</span><span class="arrow">→</span></div></article>
+          <article class="station-card"><div class="station-top"><div class="station-icon">♀</div><span class="duration">◷ 15 MENIT</span></div><div class="station-no">STATION 03 · KLINIS</div><h3>Obstetri & Ginekologi</h3><p>Kehamilan, persalinan, kontrasepsi, dan skrining ginekologi.</p><div class="station-footer"><span class="case-count">8 kasus tersedia</span><span class="arrow">→</span></div></article>
+          <article class="station-card"><div class="station-top"><div class="station-icon">＋</div><span class="duration">◷ 15 MENIT</span></div><div class="station-no">STATION 04 · MEDIS</div><h3>Ilmu Penyakit Dalam</h3><p>Endokrin, reumatologi, nefrologi, gastrohepatologi, dan infeksi.</p><div class="station-footer"><span class="case-count">26 kasus tersedia*</span><span class="arrow">→</span></div></article>
+          <article class="station-card"><div class="station-top"><div class="station-icon">⌁</div><span class="duration">◷ 15 MENIT</span></div><div class="station-no">STATION 05 · MEDIS</div><h3>Neurologi</h3><p>Nyeri kepala, stroke, saraf perifer, vertigo, dan meningitis.</p><div class="station-footer"><span class="case-count">9 kasus tersedia</span><span class="arrow">→</span></div></article>
+          <article class="station-card"><div class="station-top"><div class="station-icon">⚕</div><span class="duration">◷ 15 MENIT</span></div><div class="station-no">STATION 06 · TINDAKAN</div><h3>Ilmu Bedah</h3><p>Kateterisasi, ortopedi, luka bakar, payudara, dan pemeriksaan rektal.</p><div class="station-footer"><span class="case-count">9 kasus tersedia</span><span class="arrow">→</span></div></article>
+          <article class="station-card"><div class="station-top"><div class="station-icon">◉</div><span class="duration">◷ 15 MENIT</span></div><div class="station-no">STATION 07 · MEDIS</div><h3>Psikiatri</h3><p>Wawancara klinis, status mental, dan komunikasi terapeutik.</p><div class="station-footer"><span class="case-count">7 kasus tersedia</span><span class="arrow">→</span></div></article>
+          <article class="station-card"><div class="station-top"><div class="station-icon">◎</div><span class="duration">◷ 15 MENIT</span></div><div class="station-no">STATION 08 · MEDIS</div><h3>Mata</h3><p>Visus, segmen anterior, media visual, dan penilaian kasus oftalmologi.</p><div class="station-footer"><span class="case-count">10 kasus tersedia</span><span class="arrow">→</span></div></article>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;color:#71818a;font-size:8px"><span>*Daftar Penyakit Dalam memuat 26 kasus rinci pada spesifikasi sumber.</span><span>OSCE CENTER · PESERTA TERVERIFIKASI</span></div>
+      </div>
+    </section>
+
+    <section class="artboard" data-name="02 - Workspace Peserta" aria-label="Screen 2: Workspace ujian mode peserta">
+      <header class="topbar">
+        <div class="brand"><div class="brand-mark">OS</div><div><strong>Clinical OSCE</strong><small>Workspace ujian · kasus respirasi</small></div></div>
+        <div class="top-actions"><span class="badge badge-teal">Mode Mahasiswa / Peserta</span><span class="badge badge-light">Station 02 · Respirasi</span><div class="timer"><span class="clock">◷</span><div><div class="time">15:00</div><small><span class="live-dot"></span>WAKTU BERJALAN</small></div></div></div>
+      </header>
+      <div class="screen-content workspace">
+        <nav class="sidebar"><div class="side-heading">Station aktif</div>
+          <div class="nav-item"><span class="nav-num">01</span><span class="nav-name">Kardiologi</span><span class="nav-count">6</span></div>
+          <div class="nav-item active"><span class="nav-num">02</span><span class="nav-name">Respirasi</span><span class="nav-count">6</span></div>
+          <div class="nav-item"><span class="nav-num">03</span><span class="nav-name">Obgin</span><span class="nav-count">8</span></div>
+          <div class="nav-item"><span class="nav-num">04</span><span class="nav-name">Penyakit Dalam</span><span class="nav-count">26</span></div>
+          <div class="nav-item"><span class="nav-num">05</span><span class="nav-name">Neurologi</span><span class="nav-count">9</span></div>
+          <div class="nav-item"><span class="nav-num">06</span><span class="nav-name">Bedah</span><span class="nav-count">9</span></div>
+          <div class="nav-item"><span class="nav-num">07</span><span class="nav-name">Psikiatri</span><span class="nav-count">7</span></div>
+          <div class="nav-item"><span class="nav-num">08</span><span class="nav-name">Mata</span><span class="nav-count">10</span></div>
+          <div class="sidebar-note">Mode peserta menampilkan skenario dan tugas. Hasil pemeriksaan hanya muncul setelah diminta kepada penguji.</div>
+        </nav>
+        <main class="center">
+          <div class="case-heading"><div><div class="eyebrow">Station 02 / 08 · durasi 15 menit</div><h1>Kasus Aktif · Respirasi</h1><div class="case-sub">Kasus 01 · silakan lakukan anamnesis dan pemeriksaan terarah</div></div><span class="badge badge-teal">Peserta</span></div>
+          <section class="scenario">
+            <div><div class="label">Skenario Klinik</div><p>Perempuan 45 tahun datang ke IGD dengan sesak sejak 3 jam terakhir, keluhan kronis 3 bulan. Pasien bekerja di area tambang/kapas dan merupakan eks-perokok.</p></div>
+            <div><div class="label">Instruksi Tugas</div><ol class="tasks"><li>Perkenalan, identitas, kerahasiaan, consent.</li><li>Anamnesis Sacred 7 dan riwayat relevan.</li><li>Minta hasil vital dan pemeriksaan fisik.</li><li>Usulkan serta interpretasikan penunjang.</li><li>Sampaikan diagnosis dan 2-3 DD.</li><li>Tulis resep R/ dan S serta rencana.</li><li>Berikan KIE dan rujukan yang sesuai.</li></ol></div>
+          </section>
+          <div class="two-col">
+            <section class="surface panel"><div class="panel-head"><div class="card-title"><span class="icon">⌕</span>Anamnesis · Sacred 7</div><span class="eyebrow">lembar kerja</span></div><div class="chips"><span class="chip">Onset</span><span class="chip">Lokasi</span><span class="chip">Kualitas</span><span class="chip">Kuantitas · VAS/NRS</span><span class="chip">Kronologi/MOI</span><span class="chip">Memperingan</span><span class="chip">Memperberat</span><span class="chip">Keluhan lain</span></div><div class="label" style="margin-top:10px">Past History</div><div class="chips"><span class="chip">RPD</span><span class="chip">RPK</span><span class="chip">Sosial/Lingkungan</span><span class="chip">RPO</span><span class="chip">Alergi</span></div></section>
+            <section class="surface panel"><div class="panel-head"><div class="card-title"><span class="icon">✚</span>Pemeriksaan Fisik</div><span class="badge badge-light">HASIL TERKUNCI</span></div><div class="chips"><span class="chip">Kesadaran · AVPU</span><span class="chip">TD · HR · RR · Suhu · SpO2</span><span class="chip">BB · TB · LP</span><span class="chip">General</span><span class="chip">Status lokalis</span></div><p class="small" style="margin:10px 0">Minta hasil pemeriksaan fisik kepada penguji untuk membuka temuan vital, thorax, dan status lokalis.</p><button class="btn">＋ &nbsp;Minta hasil ke penguji</button></section>
+          </div>
+          <section class="surface panel"><div class="panel-head"><div class="card-title"><span class="icon">⌁</span>Pemeriksaan Penunjang & Media</div><span class="badge badge-light">BELUM DIMINTA</span></div><div class="chips"><span class="chip">DL · UL · Kimia darah</span><span class="chip">Spirometri</span><span class="chip">Foto Thorax / CXR</span><span class="chip">AGD · Elektrolit</span><span class="chip">Gram/KOH · BTA · Kultur</span></div><div class="small" style="margin-top:8px">Ajukan pemeriksaan yang relevan; interpretasi hasil setelah disampaikan penguji.</div></section>
+          <section class="surface panel"><div class="panel-head"><div class="card-title"><span class="icon">Rx</span>Pad Resep Dokter</div><span class="eyebrow">belum diisi</span></div><div class="rx"><div class="label">R/ nama obat · dosis · bentuk sediaan · No. Romawi</div><textarea placeholder="R/ Nama obat, dosis, bentuk sediaan No. ..."></textarea><div class="label" style="margin-top:7px">S frekuensi dd takaran rute/keterangan</div><textarea placeholder="S ... dd ... rute/keterangan"></textarea></div></section>
+        </main>
+        <aside class="rightbar">
+          <section class="surface panel"><div class="panel-head"><div class="card-title"><span class="icon">∑</span>Kalkulator Diet DM</div><span class="badge badge-light">STATION 04</span></div><div class="small">Rumus sumber: <strong>30 kkal × BBI + koreksi umur/aktivitas/BB</strong>.</div><div class="diet-grid" style="margin-top:9px"><div class="diet-field"><span>BBI</span><strong>55 kg</strong></div><div class="diet-field"><span>Koreksi</span><strong>+ 0 kkal</strong></div></div><div class="diet-output">1.650 kkal / hari</div><div class="footnote">Nilai koreksi ditetapkan berdasarkan instruksi penguji.</div></section>
+          <section class="surface panel"><div class="panel-head"><div class="card-title"><span class="icon">✓</span>Progres Station</div></div><div class="small">01 · Perkenalan & consent</div><div style="height:5px;margin:6px 0 10px;border-radius:99px;background:#e8eef0"><div style="width:28%;height:100%;border-radius:99px;background:#18806f"></div></div><div class="chips"><span class="chip">Anamnesis</span><span class="chip">Pemeriksaan</span><span class="chip">Penunjang</span><span class="chip">Diagnosis</span><span class="chip">KIE</span></div></section>
+          <section class="surface panel"><div class="card-title"><span class="icon">i</span>Catatan Peserta</div><p class="small" style="margin-bottom:0">Seluruh jawaban ditulis pada lembar kerja selama timer aktif. Data kasus tidak menggantikan penilaian klinis penguji.</p></section>
+        </aside>
+      </div>
+    </section>
+
+    <section class="artboard" data-name="03 - Workspace Penguji Terbuka" aria-label="Screen 3: Workspace penguji terbuka penuh">
+      <header class="topbar">
+        <div class="brand"><div class="brand-mark">OS</div><div><strong>Clinical OSCE</strong><small>Examiner workspace · answer key</small></div></div>
+        <div class="top-actions"><span class="badge">Mode Penguji</span><span class="badge badge-light">Station 08 · Mata</span><div class="timer"><span class="clock">◷</span><div><div class="time">15:00</div><small>SISA WAKTU STATION</small></div></div></div>
+      </header>
+      <div class="screen-content workspace">
+        <nav class="sidebar"><div class="side-heading">Panel penguji</div>
+          <div class="nav-item"><span class="nav-num">01</span><span class="nav-name">Skenario</span><span class="nav-count">✓</span></div>
+          <div class="nav-item active"><span class="nav-num">02</span><span class="nav-name">Hasil pemeriksaan</span><span class="nav-count">●</span></div>
+          <div class="nav-item"><span class="nav-num">03</span><span class="nav-name">Kunci jawaban</span><span class="nav-count">●</span></div>
+          <div class="nav-item"><span class="nav-num">04</span><span class="nav-name">Resep / tatalaksana</span><span class="nav-count">●</span></div>
+          <div class="nav-item"><span class="nav-num">05</span><span class="nav-name">Status mental</span><span class="nav-count">●</span></div>
+          <div class="nav-item"><span class="nav-num">06</span><span class="nav-name">Rubrik penilaian</span><span class="nav-count">●</span></div>
+          <div class="sidebar-note"><strong>Mode terbuka.</strong><br>Data klinis lengkap hanya tersedia untuk akun penguji.</div>
+        </nav>
+        <main class="center">
+          <div class="case-heading"><div><div class="eyebrow">Station 08 / 08 · OD Glaukoma Akut</div><h1>Hasil Pemeriksaan & Kunci Penguji</h1><div class="case-sub">Pasien laki-laki, 50 tahun · nyeri mata kanan mendadak · NRS 7/10</div></div><span class="badge">PENGUJI AKTIF</span></div>
+          <section class="surface panel"><div class="panel-head"><div class="card-title"><span class="icon">✚</span>Hasil Pemeriksaan Fisik · Terbuka</div><span class="badge badge-teal">REVEALED</span></div><div class="two-col"><div><div class="label">Vital signs</div><div class="chips"><span class="chip">Kesadaran: belum dicantumkan</span><span class="chip">TD: minta sesuai skenario</span><span class="chip">HR · RR · Suhu · SpO2</span></div></div><div><div class="label">Status lokalis mata</div><div class="chips"><span class="chip">COA dangkal</span><span class="chip">Pupil midriasis</span><span class="chip">Edema kornea</span><span class="chip">Lapangan pandang menyempit</span><span class="chip">Refleks fundus menurun</span><span class="chip">TIO >21 mmHg</span></div></div></div></section>
+          <section class="surface panel"><div class="panel-head"><div class="card-title"><span class="icon">⌁</span>Hasil Pemeriksaan Penunjang</div><span class="badge badge-teal">TERSEDIA</span></div><div class="chips"><span class="chip">Tonometri palpasi: N+1, keras</span><span class="chip">Schiotz: prosedur 14 langkah</span><span class="chip">TIO >21 mmHg</span><span class="chip">Konfrontasi: lapang menyempit</span><span class="chip">Funduskopi: refleks menurun</span></div></section>
+          <div class="two-col">
+            <section class="surface panel"><div class="panel-head"><div class="card-title"><span class="icon">◇</span>Kunci Diagnosis</div><span class="eyebrow">referensi penguji</span></div><div class="label">Diagnosis kerja</div><div class="small"><strong>OD Glaukoma Akut</strong></div><div class="label" style="margin-top:10px">Diagnosis banding (DD)</div><div class="small">Belum dicantumkan pada spesifikasi sumber — lengkapi dari referensi penguji setempat.</div><div class="anchor-note">Kasus: nyeri mata mendadak, buram, mual, fotofobia, COA dangkal, midriasis, edema kornea.</div></section>
+            <section class="surface panel"><div class="panel-head"><div class="card-title"><span class="icon">Rx</span>Resep Farmakologi</div><span class="eyebrow">sesuai data kasus</span></div><div class="rx"><div class="small"><strong>R/ Asetazolamid 500 mg tab No. X</strong><br>S 3 dd 1 tab</div><div style="height:1px;margin:7px 0;background:#e8dfc7"></div><div class="small"><strong>R/ Timolol 0.5% ED No. I</strong><br>S 2 dd gtt 1 OD</div><div class="anchor-note">Rujuk Sp.M segera. Contoh edukasi dari spesifikasi OSCE; validasi pengajar sebelum digunakan.</div></div></section>
+          </div>
+          <section class="surface panel"><div class="panel-head"><div class="card-title"><span class="icon">☑</span>Checklist Penguji</div><span class="badge badge-light">HASIL TERBUKA</span></div><div class="chips"><span class="chip">Skenario disampaikan</span><span class="chip">Pemeriksaan diminta</span><span class="chip">Temuan diinterpretasi</span><span class="chip">Diagnosis disebutkan</span><span class="chip">Rujukan segera</span></div></section>
+        </main>
+        <aside class="rightbar">
+          <section class="surface panel"><div class="panel-head"><div class="card-title"><span class="icon">◉</span>Status Psikiatri</div><span class="badge badge-light">7 DOMAIN</span></div>
+            <div class="small" style="margin-bottom:7px"><strong>Contoh kasus:</strong> Skizofrenia Paranoid</div>
+            <div class="mental-row"><span>Kesan Umum</span><span class="mental-value">Kontak visual tidak adekuat</span></div>
+            <div class="mental-row"><span>Kesadaran</span><span class="mental-value">Belum dirinci sumber</span></div>
+            <div class="mental-row"><span>Mood/Afek</span><span class="mental-value">Afek inappropriate</span></div>
+            <div class="mental-row"><span>Proses & Isi Pikir</span><span class="mental-value">Belum dirinci sumber</span></div>
+            <div class="mental-row"><span>Persepsi</span><span class="mental-value">Halusinasi auditorik (+)</span></div>
+            <div class="mental-row"><span>Dorongan Instingtual</span><span class="mental-value">Belum dirinci sumber</span></div>
+            <div class="mental-row"><span>Psikomotor</span><span class="mental-value">Bicara sendiri; memukul kepala</span></div>
+          </section>
+          <section class="surface panel"><div class="panel-head"><div class="card-title"><span class="icon">☷</span>Rubrik Skor 0-1-2</div><span class="eyebrow">observasi prosedur</span></div>
+            <table><thead><tr><th>Komponen</th><th>Skor</th></tr></thead><tbody>
+              <tr><td>Verifikasi identitas & consent</td><td><div class="score-options"><span>0</span><span>1</span><span class="selected">2</span></div></td></tr>
+              <tr><td>Visus & segmen anterior</td><td><div class="score-options"><span>0</span><span class="selected">1</span><span>2</span></div></td></tr>
+              <tr><td>Interpretasi hasil</td><td><div class="score-options"><span>0</span><span>1</span><span>2</span></div></td></tr>
+              <tr><td>Resep & safety-netting</td><td><div class="score-options"><span>0</span><span>1</span><span>2</span></div></td></tr>
+              <tr><td>Rujukan Sp.M segera</td><td><div class="score-options"><span>0</span><span>1</span><span class="selected">2</span></div></td></tr>
+            </tbody></table>
+            <div class="footnote">0 = Tidak dilakukan · 1 = Tidak sempurna · 2 = Sesuai prosedur.</div>
+          </section>
+        </aside>
+      </div>
+    </section>
+
+    <section class="artboard" data-name="04 - Showcase Kartu Kasus Station 2 sampai 8" aria-label="Screen 4: Showcase kartu kasus station 2-8">
+      <header class="topbar">
+        <div class="brand"><div class="brand-mark">OS</div><div><strong>Clinical OSCE</strong><small>Clinical reference cards · station 02-08</small></div></div>
+        <div class="top-actions"><span class="top-label">Pemeriksaan khusus & prosedur</span><span class="badge badge-teal">7 Kartu Showcase</span><span class="badge">Figma Artboard 04</span></div>
+      </header>
+      <div class="showcase">
+        <div class="section-heading"><div><div class="eyebrow">Quick clinical reference</div><h2>Showcase Kartu Kasus per Station</h2></div><span class="badge badge-light">Sampel dari data spesifikasi OSCE</span></div>
+        <div class="showcase-grid">
+          <article class="surface showcase-card">
+            <div class="panel-head"><div class="card-title"><span class="icon">02</span>Respirasi · PPOK Emfisema</div><span class="card-tag">CXR / FOTO THORAX</span></div>
+            <div class="cxr">CHEST X-RAY · PA</div>
+            <div class="anchor-note"><strong>Interpretasi sumber:</strong> gambaran hiperinflasi dan jantung pendulum. Spirometri FEV1/FVC 60%.</div>
+            <div class="footnote">Kartu media visual · hasil dibuka setelah diminta peserta.</div>
+          </article>
+          <article class="surface showcase-card">
+            <div class="panel-head"><div class="card-title"><span class="icon">03</span>Obgin · ANC / AKDR</div><span class="card-tag">RUBRIK 0-1-2</span></div>
+            <div class="rubric-mini">
+              <div class="rubric-line"><span>Identitas & riwayat obstetri</span><span class="squares"><span>0</span><span>1</span><span>2</span></span></div>
+              <div class="rubric-line"><span>HPHT & rumus TP Naegele</span><span class="squares"><span>0</span><span>1</span><span>2</span></span></div>
+              <div class="rubric-line"><span>TFU & Manuver Leopold 1-4</span><span class="squares"><span>0</span><span>1</span><span>2</span></span></div>
+              <div class="rubric-line"><span>Auskultasi BJA</span><span class="squares"><span>0</span><span>1</span><span>2</span></span></div>
+            </div>
+            <div class="procedure-list"><span>ANC · 26 langkah</span><span>AKDR Copper T 380A · 27 langkah</span><span>Withdrawal technique</span></div>
+          </article>
+          <article class="surface showcase-card">
+            <div class="panel-head"><div class="card-title"><span class="icon">04</span>Interna · DM Tipe 2</div><span class="card-tag">KALKULATOR DIET</span></div>
+            <div class="small">Rumus yang dicantumkan di spesifikasi kasus:</div>
+            <div style="margin:12px 0;padding:14px;border:1px solid #cde8dc;border-radius:11px;background:#eff9f4;color:#15574f;font-size:16px;font-weight:900;text-align:center">30 kkal × BBI</div>
+            <div class="diet-grid"><div class="diet-field"><span>BBI</span><strong>Input penguji</strong></div><div class="diet-field"><span>Koreksi umur</span><strong>Input penguji</strong></div><div class="diet-field"><span>Koreksi aktivitas</span><strong>Input penguji</strong></div><div class="diet-field"><span>Koreksi berat</span><strong>Input penguji</strong></div></div>
+            <div class="diet-output">Total = 30 × BBI + koreksi</div>
+          </article>
+          <article class="surface showcase-card">
+            <div class="panel-head"><div class="card-title"><span class="icon">05</span>Neuro · Skala Otot MRC</div><span class="card-tag">NEUROLOGI</span></div>
+            <div class="small">Pemeriksaan kekuatan otot dan refleks pada kasus stroke/HNP.</div>
+            <div class="scale"><div><strong>0</strong><span>Tidak ada</span></div><div><strong>1</strong><span>Kontraksi</span></div><div><strong>2</strong><span>Gravitasi dieliminasi</span></div><div><strong>3</strong><span>Melawan gravitasi</span></div><div><strong>4</strong><span>Melawan tahanan</span></div><div><strong>5</strong><span>Normal</span></div></div>
+            <div class="label" style="margin-top:9px">Refleks patologis</div><div class="chips"><span class="chip">Babinski</span><span class="chip">Chaddock</span><span class="chip">Oppenheim</span><span class="chip">Gordon</span><span class="chip">Hoffman-Tromner</span></div>
+          </article>
+          <article class="surface showcase-card">
+            <div class="panel-head"><div class="card-title"><span class="icon">06</span>Bedah · Prosedur</div><span class="card-tag">CHECKLIST TINDAKAN</span></div>
+            <div class="rubric-line"><strong>Kateter Foley</strong><span class="badge badge-light">18 langkah</span></div>
+            <div class="procedure-list"><span>Identitas & consent</span><span>Evaluasi kontraindikasi</span><span>Asepsis</span><span>Insersi</span><span>Konfirmasi & fiksasi</span></div>
+            <div style="height:1px;margin:10px 0;background:#e8eef0"></div>
+            <div class="rubric-line"><strong>Sirkumsisi</strong><span class="badge badge-light">15 langkah</span></div>
+            <div class="small">Screening hipospadia, epispadia, chordee, dan webbed penis sebelum prosedur.</div>
+          </article>
+          <article class="surface showcase-card">
+            <div class="panel-head"><div class="card-title"><span class="icon">07</span>Psikiatri · Status Mental</div><span class="card-tag">7 DOMAIN WAJIB</span></div>
+            <div class="mental-row"><span>Kesan Umum</span><span class="mental-value">Kontak visual tidak adekuat</span></div>
+            <div class="mental-row"><span>Kesadaran</span><span class="mental-value">Dinilai saat wawancara</span></div>
+            <div class="mental-row"><span>Mood/Afek</span><span class="mental-value">Afek inappropriate</span></div>
+            <div class="mental-row"><span>Proses & Isi Pikir</span><span class="mental-value">Catat hasil asesmen</span></div>
+            <div class="mental-row"><span>Persepsi</span><span class="mental-value">Halusinasi auditorik (+)</span></div>
+            <div class="mental-row"><span>Dorongan Instingtual</span><span class="mental-value">Catat hasil asesmen</span></div>
+            <div class="mental-row"><span>Psikomotor</span><span class="mental-value">Bicara sendiri; memukul kepala</span></div>
+          </article>
+          <article class="surface showcase-card">
+            <div class="panel-head"><div class="card-title"><span class="icon">08</span>Mata · Visus & Anterior</div><span class="card-tag">PEMERIKSAAN KHUSUS</span></div>
+            <div class="eye-chart">
+              <div class="eye-box"><strong>TAJAM PENGLIHATAN</strong><span>Snellen chart · 6 m</span><span>Pinhole</span><span>Hitung jari · 1-6 m</span><span>Lambaian tangan · 1 m</span><span>Penlight · 25 cm</span><span>LP / NLP</span></div>
+              <div class="eye-box"><strong>SEGMEN ANTERIOR</strong><span>Palpebra & konjungtiva</span><span>Eversi konjungtiva</span><span>Kornea · BMD/COA</span><span>Iris & pupil</span><span>Pupil · RAPD</span><span>Lensa</span></div>
+            </div>
+            <div class="anchor-note">Catat visus OD/OS dan hasil pemeriksaan segmen anterior secara sistematis.</div>
+          </article>
+        </div>
+        <div class="footnote" style="display:flex;justify-content:space-between;margin-top:10px"><span>Data showcase mengikuti spesifikasi; rincian prosedur dan klinis ditinjau penguji.</span><span>OSCE CENTER · ARTBOARD 04</span></div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

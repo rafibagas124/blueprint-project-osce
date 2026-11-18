@@ -56,9 +56,26 @@ function wireEvents() {
   document.getElementById("btn-room-lab").addEventListener("click", () => openWorkstationModal("lab"));
   document.getElementById("btn-room-desk").addEventListener("click", () => openWorkstationModal("form"));
 
+  const btnRoomDoor = document.getElementById("btn-room-door");
+  if (btnRoomDoor) {
+    btnRoomDoor.addEventListener("click", () => {
+      if (typeof requestExitStationRoom === "function") {
+        requestExitStationRoom();
+      } else {
+        exitStationRoomToCorridor();
+      }
+    });
+  }
+
   // Bottom Center Context Action
   document.getElementById("btn-context-action").addEventListener("click", triggerPrimaryContextAction);
-  document.getElementById("btn-exit-room").addEventListener("click", exitStationRoomToCorridor);
+  document.getElementById("btn-exit-room").addEventListener("click", () => {
+    if (typeof requestExitStationRoom === "function") {
+      requestExitStationRoom();
+    } else {
+      exitStationRoomToCorridor();
+    }
+  });
 
   // Instruction Modal
   document.getElementById("btn-close-instruction").addEventListener("click", closeInstructionModal);
@@ -320,16 +337,20 @@ function wireEvents() {
     if (k === "d" || e.key === "ArrowRight") state.keys.d = false;
   });
 
-  // Mouse Drag to look around in 3D
+  // Mouse Drag to look around in 3D & Click to interact with door
   let isDragging = false;
   let prevX = 0;
   let prevY = 0;
+  let startX = 0;
+  let startY = 0;
   const canvasContainer = document.getElementById("canvas-container");
 
   canvasContainer.addEventListener("mousedown", (e) => {
     isDragging = true;
     prevX = e.clientX;
     prevY = e.clientY;
+    startX = e.clientX;
+    startY = e.clientY;
     state.player.targetYaw = null;
   });
 
@@ -343,7 +364,33 @@ function wireEvents() {
     state.player.pitch = Math.max(-0.55, Math.min(0.55, state.player.pitch - dy * 0.0035));
   });
 
-  window.addEventListener("mouseup", () => { isDragging = false; });
+  window.addEventListener("mouseup", (e) => {
+    if (isDragging) {
+      isDragging = false;
+      const moved = Math.hypot(e.clientX - startX, e.clientY - startY);
+      if (moved < 6 && state.sceneView === "room" && camera && scene && roomInteriorDoorGroup) {
+        const mouse = new THREE.Vector2(
+          (e.clientX / window.innerWidth) * 2 - 1,
+          -(e.clientY / window.innerHeight) * 2 + 1
+        );
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(roomInteriorDoorGroup.children, true);
+        if (intersects && intersects.length > 0) {
+          const dist = Math.hypot(state.player.x - 0, state.player.z - 3.355);
+          if (dist <= 2.2) {
+            if (typeof requestExitStationRoom === "function") {
+              requestExitStationRoom();
+            } else {
+              exitStationRoomToCorridor();
+            }
+          } else {
+            showToast("Mendekatlah ke pintu untuk keluar ke koridor.", "info");
+          }
+        }
+      }
+    }
+  });
 
   // Touch Support
   canvasContainer.addEventListener("touchstart", (e) => {

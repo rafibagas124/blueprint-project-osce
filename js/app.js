@@ -573,6 +573,7 @@ function enterStationRoom() {
   if (typeof logCandidateEvent === "function") logCandidateEvent("enter_room", { stationIdx: state.currentStationIdx });
   state.sceneView = "room";
   state.isSeated = false;
+  state.isExitingRoom = false;
   corridorGroup.visible = false;
   roomGroup.visible = true;
 
@@ -595,12 +596,33 @@ function enterStationRoom() {
   }
   broadcastLocalPlayer();
 
+  // Animasi pintu berayun menutup di belakang pemain saat masuk ruangan
+  if (typeof triggerRoomDoorAnimation === "function") {
+    if (roomInteriorDoorGroup && roomInteriorDoorGroup.userData && roomInteriorDoorGroup.userData.leafPivot) {
+      roomInteriorDoorGroup.userData.leafPivot.rotation.y = -Math.PI * 0.38;
+    }
+    triggerRoomDoorAnimation(false, 450);
+  }
+
   const st = STATIONS[state.currentStationIdx];
   updateSubtitle(`Anda berada di dalam ${st.code} (${st.title}). Klik objek atau tekan [E] untuk menyelesaikan tugas.`);
   updateHUD();
 }
 
+function requestExitStationRoom() {
+  if (state.sceneView !== "room" || state.isExitingRoom) return;
+  state.isExitingRoom = true;
+  if (typeof triggerRoomDoorAnimation === "function") {
+    triggerRoomDoorAnimation(true, 300);
+    setTimeout(() => exitStationRoomToCorridor(), 280);
+  } else {
+    exitStationRoomToCorridor();
+  }
+}
+
 function exitStationRoomToCorridor() {
+  if (state.sceneView !== "room") return;
+  state.isExitingRoom = false;
   if (typeof playDoorSFX === "function") playDoorSFX(false);
   if (typeof logCandidateEvent === "function") logCandidateEvent("exit_room", { stationIdx: state.currentStationIdx });
   if (localAvatar) {
@@ -632,6 +654,8 @@ function toggleCameraView() {
 function wingOffsetX() { return state.wing === 1 ? WING_DX : 0; }
 if (typeof window !== "undefined") {
   window.wingOffsetX = wingOffsetX;
+  window.requestExitStationRoom = requestExitStationRoom;
+  window.exitStationRoomToCorridor = exitStationRoomToCorridor;
 }
 
 // 3D Screen Projection untuk penanda tombol
@@ -648,6 +672,7 @@ function project3DToScreen(vec3, applyWing = false) {
 function update3DFloatingMarkers() {
   const chairMarker = document.getElementById("chair-marker");
   const doorMarker = document.getElementById("door-marker");
+  const roomDoorMarker = document.getElementById("room-marker-door");
   const npcMarker = document.getElementById("room-marker-npc");
   const labMarker = document.getElementById("room-marker-lab");
   const deskMarker = document.getElementById("room-marker-desk");
@@ -657,6 +682,7 @@ function update3DFloatingMarkers() {
     npcMarker.classList.add("hidden");
     labMarker.classList.add("hidden");
     deskMarker.classList.add("hidden");
+    if (roomDoorMarker) roomDoorMarker.classList.add("hidden");
 
     const anchor = station3DAnchors[state.currentStationIdx];
     if (!anchor) return;
@@ -684,6 +710,23 @@ function update3DFloatingMarkers() {
   } else {
     chairMarker.classList.add("hidden");
     doorMarker.classList.add("hidden");
+
+    // Exit door marker di dinding depan stasiun (x = 0, z = 3.355)
+    const distToDoor = Math.hypot(state.player.x - 0, state.player.z - 3.355);
+    if (roomDoorMarker) {
+      if (distToDoor <= 2.2) {
+        const doorScreen = project3DToScreen(new THREE.Vector3(0, 1.65, 3.355));
+        if (doorScreen) {
+          roomDoorMarker.classList.remove("hidden");
+          roomDoorMarker.style.left = `${doorScreen.x}px`;
+          roomDoorMarker.style.top = `${doorScreen.y}px`;
+        } else {
+          roomDoorMarker.classList.add("hidden");
+        }
+      } else {
+        roomDoorMarker.classList.add("hidden");
+      }
+    }
 
     const npcPos = project3DToScreen(new THREE.Vector3(-0.25, 2.05, -2.25));
     if (npcPos) {
@@ -811,7 +854,12 @@ function updateHUD() {
       actionBtn.classList.remove("hidden");
     }
   } else {
-    actionLabel.textContent = `Buka Lembar Kerja — ${st.code}`;
+    const distToExit = Math.hypot(state.player.x - 0, state.player.z - 3.355);
+    if (distToExit <= 2.2) {
+      actionLabel.textContent = "Keluar ke Koridor";
+    } else {
+      actionLabel.textContent = `Buka Lembar Kerja — ${st.code}`;
+    }
     actionBtn.classList.remove("hidden");
   }
 
@@ -832,7 +880,12 @@ function triggerPrimaryContextAction() {
       openInstructionModal();
     }
   } else {
-    openWorkstationModal("form");
+    const distToExit = Math.hypot(state.player.x - 0, state.player.z - 3.355);
+    if (distToExit <= 2.2) {
+      requestExitStationRoom();
+    } else {
+      openWorkstationModal("form");
+    }
   }
 }
 
@@ -841,6 +894,10 @@ function triggerPrimaryContextAction() {
 // =========================================================================
 function animate() {
   animFrameId = requestAnimationFrame(animate);
+
+  if (typeof updateRoomDoorAnimation === "function") {
+    updateRoomDoorAnimation();
+  }
 
   const moveSpeed = 0.085;
   const turnSpeed = 0.032;

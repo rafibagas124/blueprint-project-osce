@@ -20,6 +20,12 @@ Kredensial login dibuat acak secara dinamis setiap kali mode demo dijalankan. In
 - **Mahasiswa**: Pilih peran **Mahasiswa / Peserta Ujian**, masukkan NIM (`DEV-001` s.d. `DEV-020`) beserta Token Ujian dari file kredensial.
 - **Asesor / Koordinator**: Pilih peran **Dosen / Asesor Penguji**, masukkan username `dev-koordinator` dan Password acak dari file kredensial.
 
+## Modul OSCE Klinis (8 Station)
+- Setelah login, buka **OSCE Klinis** di blueprint untuk timer 15 menit, skenario peserta, permintaan hasil pemeriksaan, pad resep, dan rubrik penguji.
+- Bank kasus server-authoritative berada di `src/data/osce-clinical-seed.js`; jawaban, diagnosis, dan tatalaksana hanya dikirim kepada akun penguji. Peserta meminta hasil fisik/penunjang melalui endpoint terautentikasi.
+- Spesifikasi sumber ada di `KETENTUAN_OSCE.md`. Daftar Penyakit Dalam memuat 26 kasus spesifik walaupun judul spesifikasi menyebut 21; semua kasus yang tercantum dipertahankan.
+- Untuk meninjau seluruh komponen UI dalam satu layar dan mengimpor desain ke Figma, buka `http://localhost:8080/osce-preview.html` lalu gunakan plugin html.to.design.
+
 ## Menjalankan Pengujian Otomatis
 Jalankan seluruh rangkaian tes otomatis:
 ```bash

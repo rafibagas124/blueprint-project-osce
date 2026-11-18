@@ -33,6 +33,7 @@ const {
   generateOptionId,
   resolveOptionId
 } = require("./src/data/question-bank");
+const { getClinicalStations, getCaseFindings } = require("./src/data/osce-clinical-seed");
 
 // Validasi struktur bank soal saat server start
 validateQuestionBank();
@@ -778,6 +779,54 @@ app.get("/api/station/:stationNo", async (req, res) => {
   });
 });
 
+function getClinicalOsceClaims(req) {
+  const authHeader = req.headers.authorization;
+  const token = (authHeader && authHeader.startsWith("Bearer "))
+    ? authHeader.slice(7)
+    : req.query.token;
+  return token ? verifyJwt(token) : null;
+}
+
+app.get("/api/clinical-osce", (req, res) => {
+  const claims = getClinicalOsceClaims(req);
+  if (!claims) {
+    return res.status(401).json({ error: "Token autentikasi diperlukan atau tidak valid." });
+  }
+  if (!["student", "assessor", "coordinator"].includes(claims.role)) {
+    return res.status(403).json({ error: "Peran akun tidak berwenang mengakses materi OSCE klinis." });
+  }
+
+  const isAssessor = claims.role === "assessor" || claims.role === "coordinator";
+  return res.json({
+    ok: true,
+    role: isAssessor ? "assessor" : "student",
+    stations: getClinicalStations(claims.role)
+  });
+});
+
+app.get("/api/clinical-osce/:stationNo/:caseNo/:kind", (req, res) => {
+  const claims = getClinicalOsceClaims(req);
+  if (!claims) {
+    return res.status(401).json({ error: "Token autentikasi diperlukan atau tidak valid." });
+  }
+  if (!["student", "assessor", "coordinator"].includes(claims.role)) {
+    return res.status(403).json({ error: "Peran akun tidak berwenang meminta hasil pemeriksaan." });
+  }
+
+  const stationNo = Number(req.params.stationNo);
+  const caseNo = Number(req.params.caseNo);
+  if (!Number.isInteger(stationNo) || stationNo < 1 || stationNo > 8 ||
+      !Number.isInteger(caseNo) || caseNo < 1) {
+    return res.status(400).json({ error: "Nomor station atau kasus tidak valid." });
+  }
+
+  const result = getCaseFindings(stationNo, caseNo, req.params.kind);
+  if (!result) {
+    return res.status(404).json({ error: "Kasus atau jenis hasil pemeriksaan tidak ditemukan." });
+  }
+  return res.json({ ok: true, ...result });
+});
+
 function isStationAllowedNow(student, stationNo) {
   // TODO Fase 4: validasi rotasi ronde & jam ujian stasiun
   return true;
@@ -938,6 +987,7 @@ app.get("/api/progress", async (req, res) => {
 // Static Web Server dengan ALLOWLIST ketat (bukan daftar blokir)
 const ALLOWED_STATIC_FILES = new Set([
   "blueprint.html",
+  "osce-preview.html",
   "index.html",
   "manifest.json",
   "sw.js"
