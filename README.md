@@ -26,6 +26,11 @@ Kredensial login dibuat acak secara dinamis setiap kali mode demo dijalankan. In
 - Spesifikasi sumber ada di `KETENTUAN_OSCE.md`. Daftar Penyakit Dalam memuat 26 kasus spesifik walaupun judul spesifikasi menyebut 21; semua kasus yang tercantum dipertahankan.
 - Untuk meninjau seluruh komponen UI dalam satu layar dan mengimpor desain ke Figma, buka `http://localhost:8080/osce-preview.html` lalu gunakan plugin html.to.design.
 
+## Deployment Vercel
+- `vercel.json` mengarahkan `/` ke halaman blueprint dan membiarkan file HTML/CSS/JS statis dilayani langsung oleh Vercel. Endpoint `/api/*` menggunakan Express melalui Vercel Function.
+- Pada Vercel, WebSocket dinonaktifkan dan penyimpanan memakai `MemoryStore`; data sesi tidak persisten antar-cold-start. Tambahkan `JWT_SECRET` minimal 32 karakter di Project Settings untuk sesi autentikasi yang stabil. Tanpa secret, preview tetap dapat berjalan dengan secret acak per instance.
+- File di `/src/*` sengaja tidak disajikan sebagai aset statis karena berisi bank soal dan kunci jawaban server-side.
+
 ## Menjalankan Pengujian Otomatis
 Jalankan seluruh rangkaian tes otomatis:
 ```bash

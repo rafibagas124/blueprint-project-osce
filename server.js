@@ -37,6 +37,7 @@ const { getClinicalStations, getCaseFindings } = require("./src/data/osce-clinic
 
 // Validasi struktur bank soal saat server start
 validateQuestionBank();
+const IS_VERCEL = Boolean(process.env.VERCEL);
 
 // ------------------------------------------------------------- Env Loader ---
 function loadDotEnv() {
@@ -64,9 +65,12 @@ const PORT = parseInt(process.env.PORT || "8080", 10);
 const DEFAULT_HOST = process.env.HOST || (process.env.NODE_ENV === "production" ? "0.0.0.0" : "127.0.0.1");
 const ROOM_CAPACITY = parseInt(process.env.ROOM_CAPACITY || "20", 10);
 
-// Aturan wajib: di production, server menolak start jika JWT_SECRET < 32 karakter
+// Local production requires a configured secret; Vercel previews use a random ephemeral fallback.
 if (process.env.NODE_ENV === "production") {
-  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+  if (process.env.JWT_SECRET && process.env.JWT_SECRET.length < 32) {
+    throw new Error("FATAL: JWT_SECRET wajib minimal 32 karakter di production.");
+  }
+  if (!IS_VERCEL && !process.env.JWT_SECRET) {
     throw new Error("FATAL: JWT_SECRET wajib minimal 32 karakter di production.");
   }
 }
@@ -79,7 +83,8 @@ const AI_MAX_COST_USD = parseFloat(process.env.AI_MAX_COST_PER_STUDENT_USD || "0
 const AI_MAX_TURNS = parseInt(process.env.AI_MAX_TURNS_PER_STATION || "25", 10);
 
 const FLUSH_MS = 100; // 10 Hz Server-Authoritative Position Sync
-const store = getStore();
+const STORE_DRIVER = IS_VERCEL ? "memory" : process.env.STORE_DRIVER || "file";
+const store = getStore(STORE_DRIVER);
 
 // --------------------------------------------------------- JWT Helper ---
 function signJwt(payload, expiresIn = "8h") {
@@ -344,7 +349,7 @@ function removeClient(client) {
 }
 
 // Flush pending movement states tiap 100ms (10 Hz)
-const flushInterval = setInterval(() => {
+const flushInterval = IS_VERCEL ? null : setInterval(() => {
   rooms.forEach((room) => {
     if (room.pending.size === 0) return;
     const batch = JSON.stringify({ type: "states", list: Array.from(room.pending.values()) });
@@ -352,7 +357,7 @@ const flushInterval = setInterval(() => {
     room.clients.forEach((c) => send(c, batch));
   });
 }, FLUSH_MS);
-flushInterval.unref();
+if (flushInterval) flushInterval.unref();
 
 // ---------------------------------------------------- Express App Setup ---
 const app = express();
@@ -380,7 +385,7 @@ app.get("/api/health", (req, res) => {
     online: clients.size,
     rooms: rooms.size,
     capacityPerRoom: ROOM_CAPACITY,
-    storeDriver: process.env.STORE_DRIVER || "file"
+    storeDriver: STORE_DRIVER
   });
 });
 
@@ -1038,40 +1043,42 @@ app.use((req, res, next) => {
 
 // ------------------------------------------------ HTTP & WS Server Setup ---
 const server = http.createServer(app);
-const wss = new WebSocketServer({ server, path: "/ws" });
+const wss = IS_VERCEL ? null : new WebSocketServer({ server, path: "/ws" });
 
-wss.on("connection", (ws, req) => {
-  const client = { ws, joined: false, alive: true };
+if (wss) {
+  wss.on("connection", (ws, req) => {
+    const client = { ws, joined: false, alive: true };
 
-  ws.on("message", (data) => {
-    client.alive = true;
-    handleWsMessage(client, data.toString("utf8"));
+    ws.on("message", (data) => {
+      client.alive = true;
+      handleWsMessage(client, data.toString("utf8"));
+    });
+
+    ws.on("close", () => removeClient(client));
+    ws.on("error", () => ws.terminate());
   });
 
-  ws.on("close", () => removeClient(client));
-  ws.on("error", () => ws.terminate());
-});
+  // Heartbeat ping/pong tiap 20 detik
+  const heartbeatInterval = setInterval(() => {
+    clients.forEach((c) => {
+      if (!c.alive) {
+        c.ws.terminate();
+        return;
+      }
+      c.alive = false;
+      if (c.ws.readyState === WebSocket.OPEN) c.ws.ping();
+    });
+  }, 20000);
+  heartbeatInterval.unref();
+}
 
-// Heartbeat ping/pong tiap 20 detik
-const heartbeatInterval = setInterval(() => {
-  clients.forEach((c) => {
-    if (!c.alive) {
-      c.ws.terminate();
-      return;
-    }
-    c.alive = false;
-    if (c.ws.readyState === WebSocket.OPEN) c.ws.ping();
-  });
-}, 20000);
-heartbeatInterval.unref();
-
-if (require.main === module) {
+if (require.main === module && !IS_VERCEL) {
   server.listen(PORT, DEFAULT_HOST, () => {
     console.log("=======================================================");
     console.log(` OSCE Center 3D Server (ws library) -> http://localhost:${PORT}/blueprint.html`);
     console.log(` Host: ${DEFAULT_HOST} • Port: ${PORT}`);
     console.log(` Kapasitas room: ${ROOM_CAPACITY} peserta • Sync: ${1000 / FLUSH_MS} Hz`);
-    console.log(` Driver Store: ${process.env.STORE_DRIVER || "file"}`);
+    console.log(` Driver Store: ${STORE_DRIVER}`);
     console.log(` Mode Autentikasi: JWT Sesi Mahasiswa + Bcrypt Login Asesor`);
     console.log("=======================================================");
   });
